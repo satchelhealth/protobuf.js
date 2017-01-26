@@ -93,20 +93,28 @@ function aOrAn(name) {
         : "a ") + name;
 }
 
-function buildNamespace(ref, ns) {
+function buildNamespace(ref, ns, buildServiceAsServer) {
     if (!ns)
         return;
     if (ns.name !== "") {
         push("");
-        push(name(ref) + "." + name(ns.name) + " = (function() {");
+        if(buildServiceAsServer){
+          push(name(ref) + "." + name(ns.name) + "Server = (function() {");
+        }else{
+          push(name(ref) + "." + name(ns.name) + " = (function() {");
+        }
         ++indent;
     }
 
     if (ns instanceof Type) {
         buildType(undefined, ns);
-    } else if (ns instanceof Service)
+    } else if (ns instanceof Service){
+      if(buildServiceAsServer){
+        buildServer(undefined, ns);
+      }else{
         buildService(undefined, ns);
-    else if (ns.name !== "") {
+      }
+    } else if (ns.name !== "") {
         push("");
         pushComment([
             ns.comment || "Namespace " + ns.name + ".",
@@ -124,9 +132,18 @@ function buildNamespace(ref, ns) {
     });
     if (ns.name !== "") {
         push("");
-        push("return " + name(ns.name) + ";");
+        if(buildServiceAsServer){
+          push("return " + name(ns.name) + "Server;");
+        }else{
+          push("return " + name(ns.name) + ";");
+        }
         --indent;
         push("})();");
+    }
+
+    // If we've got a service, also build a server implementation
+    if(ns instanceof Service && !buildServiceAsServer){
+      buildNamespace(ref, ns, true);
     }
 }
 
@@ -200,7 +217,7 @@ function buildFunction(type, functionName, gen, scope) {
 
     if (config.beautify)
         code = beautifyCode(code);
-    
+
     code = code.replace(/ {4}/g, "\t");
 
     var hasScope = scope && Object.keys(scope).length;
@@ -381,7 +398,7 @@ function buildType(ref, type) {
             --indent;
         push("};");
     }
-    
+
     if (config.encode) {
         push("");
         pushComment([
@@ -502,6 +519,77 @@ function buildType(ref, type) {
         --indent;
         push("};");
     }
+}
+
+function buildServer(ref, service) {
+  var fullName = service.fullName.substring(1) + "Server";
+  push("");
+  pushComment([
+      "Constructs a new " + service.name + " server.",
+      service.comment ? "@classdesc " + service.comment : null,
+      "@exports " + fullName,
+      "@extends $protobuf.rpc.Server",
+      "@constructor",
+      "@param {$protobuf.RPCServerImpl} rpcServerImpl RPC implementation",
+  ]);
+  push("function " + name(service.name) + "Server(rpcServerImpl) {");
+  ++indent;
+  push("$protobuf.rpc.Server.call(this, rpcServerImpl);");
+  --indent;
+  push("}");
+  push("");
+  push("(" + name(service.name) + "Server.prototype = Object.create($protobuf.rpc.Server.prototype)).constructor = " + name(service.name) + "Server;");
+
+  if (config.create) {
+      push("");
+      pushComment([
+          "Creates new " + service.name + "Server server using the specified rpc implementation.",
+          "@param {$protobuf.RPCImpl} rpcServerImpl RPC implementation",
+          "@returns {" + name(service.name) + "Server} RPC server."
+      ]);
+      push(name(service.name) + "Server.create = function create(rpcServerImpl) {");
+          ++indent;
+          push("return new this(rpcServerImpl);");
+          --indent;
+      push("};");
+  }
+
+  service.methodsArray.forEach(function(method) {
+      method.resolve();
+      var lcName = method.name.substring(0, 1).toLowerCase() + method.name.substring(1);
+      push("");
+      var cbName = name(service.name) + "Server_" + name(lcName) + "_Callback";
+      pushComment([
+          "Callback as used by {@link " + name(service.name) + "Server#" + name(lcName) + "}.",
+          // This is a more specialized version of protobuf.rpc.ServiceCallback
+          "@typedef " + cbName,
+          "@type {function}",
+          "@param {?Error} error Error, if any",
+          "@param {" + method.resolvedResponseType.fullName.substring(1) + "} [response] " + method.resolvedResponseType.name
+      ]);
+      push("");
+      pushComment([
+          method.comment || "Calls " + method.name + ".",
+          "@param {" + method.resolvedRequestType.fullName.substring(1) + "|Object} request " + method.resolvedRequestType.name + " message or plain object",
+          "@param {" + cbName + "} callback Node-style callback called with the error, if any, and " + method.resolvedResponseType.name,
+          "@returns {undefined}"
+      ]);
+      push(name(service.name) + "Server.prototype" + util.safeProp(lcName) + " = function " + name(lcName) + "(request, callback) {");
+          ++indent;
+          push("return this.rpcCall(\"" + name(lcName) + "\", $root" + method.resolvedRequestType.fullName + ", $root" + method.resolvedResponseType.fullName + ", request, callback);");
+          --indent;
+      push("};");
+      if (config.comments)
+          push("");
+      pushComment([
+          method.comment || "Calls " + method.name + ".",
+          "@name " + name(service.name) + "#" + lcName,
+          "@function",
+          "@param {" + method.resolvedRequestType.fullName.substring(1) + "|Object} request " + method.resolvedRequestType.name + " message or plain object",
+          "@returns {Promise<"+method.resolvedResponseType.fullName.substring(1)+">} Promise",
+          "@variation 2"
+      ]);
+  });
 }
 
 function buildService(ref, service) {
