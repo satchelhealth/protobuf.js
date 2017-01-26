@@ -124,7 +124,7 @@ Service.prototype.rpcCall = function rpcCall(method, requestCtor, responseCtor, 
                         response = responseCtor.toObject(response, {longs: Number, enums: String, bytes: Array, defaults: true});
                     } catch (err) {
                         self.emit("error", err, method);
-                        return callback("error", err);
+                        return callback(err);
                     }
                 }
 
