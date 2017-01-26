@@ -8,7 +8,7 @@ var util = require("../util/minimal");
 
 /**
  * A service method callback as used by {@link rpc.ServiceMethod|ServiceMethod}.
- * 
+ *
  * Differs from {@link RPCImplCallback} in that it is an actual callback of a service method which may not return `response = null`.
  * @typedef rpc.ServiceMethodCallback
  * @type {function}
@@ -28,7 +28,7 @@ var util = require("../util/minimal");
 
 /**
  * A service method mixin.
- * 
+ *
  * When using TypeScript, mixed in service methods are only supported directly with a type definition of a static module (used with reflection). Otherwise, explicit casting is required.
  * @typedef rpc.ServiceMethodMixin
  * @type {Object.<string,rpc.ServiceMethod>}
@@ -95,6 +95,11 @@ Service.prototype.rpcCall = function rpcCall(method, requestCtor, responseCtor, 
     if (!self.rpcImpl) {
         setTimeout(function() { callback(Error("already ended")); }, 0);
         return undefined;
+    }
+
+    var notVerified = requestCtor.verify(request);
+    if (notVerified) {
+      return callback("InvalidRequest: " + notVerified);
     }
 
     try {

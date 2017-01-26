@@ -49,6 +49,11 @@ Server.prototype.rpcCall = function rpcCall(method, requestCtor, responseCtor, r
               return undefined;
           }
 
+          var notVerified = responseCtor.verify(response);
+          if (notVerified) {
+            return callback("InvalidResponse: " + notVerified);
+          }
+
           try {
               response = responseCtor.encode(response).finish();
           } catch (err) {
@@ -58,7 +63,7 @@ Server.prototype.rpcCall = function rpcCall(method, requestCtor, responseCtor, r
 
           self.emit("data", response, method);
           return callback(null, response);
-        });
+        }, responseCtor.verify);
     } catch (err) {
         self.emit("error", err, method);
         setTimeout(function() { callback(err); }, 0);
