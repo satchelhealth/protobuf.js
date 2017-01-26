@@ -570,6 +570,7 @@ function buildServer(ref, service) {
       push("");
       pushComment([
           method.comment || "Calls " + method.name + ".",
+          "@param {Object} ctx Object containing request-scoped data",
           "@param {" + method.resolvedRequestType.fullName.substring(1) + "|Object} request " + method.resolvedRequestType.name + " message or plain object",
           "@param {" + cbName + "} callback Node-style callback called with the error, if any, and " + method.resolvedResponseType.name,
           "@returns {undefined}"
@@ -585,6 +586,7 @@ function buildServer(ref, service) {
           method.comment || "Calls " + method.name + ".",
           "@name " + name(service.name) + "#" + mName,
           "@function",
+          "@param {Object} ctx Object containing request-scoped data",
           "@param {" + method.resolvedRequestType.fullName.substring(1) + "|Object} request " + method.resolvedRequestType.name + " message or plain object",
           "@returns {Promise<"+method.resolvedResponseType.fullName.substring(1)+">} Promise",
           "@variation 2"
