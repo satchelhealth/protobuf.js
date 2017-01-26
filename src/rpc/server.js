@@ -29,22 +29,25 @@ function Server(rpcServerImpl) {
  * @returns {undefined}
  */
 Server.prototype.rpcCall = function rpcCall(method, requestCtor, responseCtor, request, callback) {
+    var self = this;
+
+    var lcMethod = method.substring(0, 1).toLowerCase() + method.substring(1);
+    var impl = self.rpcServerImpl[method] || self.rpcServerImpl[lcMethod];
 
     if (!request)
         throw TypeError("request must be specified");
 
-    var self = this;
     if (!callback)
         return util.asPromise(rpcCall, self, method, requestCtor, responseCtor, request);
 
-    if(!self.rpcServerImpl[method] || typeof self.rpcServerImpl[method] !== "function"){
+    if(!impl || typeof impl !== "function"){
       return callback("Method " + method + " not implemented");
     }
 
     try {
         request = requestCtor.decode(request);
         request = requestCtor.toObject(request, {longs: Number, enums: String, bytes: Array, defaults: true});
-        self.rpcServerImpl[method](request, function rpcCallback(err, response){
+        impl(request, function rpcCallback(err, response){
 
           if (err) {
               self.emit("error", err, method);

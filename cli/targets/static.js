@@ -556,11 +556,11 @@ function buildServer(ref, service) {
 
   service.methodsArray.forEach(function(method) {
       method.resolve();
-      var lcName = method.name.substring(0, 1).toLowerCase() + method.name.substring(1);
+      var mName = method.name;
       push("");
-      var cbName = name(service.name) + "Server_" + name(lcName) + "_Callback";
+      var cbName = name(service.name) + "Server_" + name(mName) + "_Callback";
       pushComment([
-          "Callback as used by {@link " + name(service.name) + "Server#" + name(lcName) + "}.",
+          "Callback as used by {@link " + name(service.name) + "Server#" + name(mName) + "}.",
           // This is a more specialized version of protobuf.rpc.ServiceCallback
           "@typedef " + cbName,
           "@type {function}",
@@ -574,16 +574,16 @@ function buildServer(ref, service) {
           "@param {" + cbName + "} callback Node-style callback called with the error, if any, and " + method.resolvedResponseType.name,
           "@returns {undefined}"
       ]);
-      push(name(service.name) + "Server.prototype" + util.safeProp(lcName) + " = function " + name(lcName) + "(request, callback) {");
+      push(name(service.name) + "Server.prototype" + util.safeProp(mName) + " = function " + name(mName) + "(request, callback) {");
           ++indent;
-          push("return this.rpcCall(\"" + name(lcName) + "\", $root" + method.resolvedRequestType.fullName + ", $root" + method.resolvedResponseType.fullName + ", request, callback);");
+          push("return this.rpcCall(\"" + name(method.name) + "\", $root" + method.resolvedRequestType.fullName + ", $root" + method.resolvedResponseType.fullName + ", request, callback);");
           --indent;
       push("};");
       if (config.comments)
           push("");
       pushComment([
           method.comment || "Calls " + method.name + ".",
-          "@name " + name(service.name) + "#" + lcName,
+          "@name " + name(service.name) + "#" + mName,
           "@function",
           "@param {" + method.resolvedRequestType.fullName.substring(1) + "|Object} request " + method.resolvedRequestType.name + " message or plain object",
           "@returns {Promise<"+method.resolvedResponseType.fullName.substring(1)+">} Promise",
@@ -652,7 +652,7 @@ function buildService(ref, service) {
         ]);
         push(name(service.name) + ".prototype" + util.safeProp(lcName) + " = function " + name(lcName) + "(request, callback) {");
             ++indent;
-            push("return this.rpcCall(" + name(lcName) + ", $root" + method.resolvedRequestType.fullName + ", $root" + method.resolvedResponseType.fullName + ", request, callback);");
+            push("return this.rpcCall(\"" + name(method.name) + "\", $root" + method.resolvedRequestType.fullName + ", $root" + method.resolvedResponseType.fullName + ", request, callback);");
             --indent;
         push("};");
         if (config.comments)
