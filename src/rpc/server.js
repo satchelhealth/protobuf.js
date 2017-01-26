@@ -28,29 +28,29 @@ function Server(rpcServerImpl) {
  * @param {rpc.ServerMethodCallback} callback server callback
  * @returns {undefined}
  */
-Server.prototype.rpcCall = function rpcCall(method, requestCtor, responseCtor, request, callback) {
+Server.prototype.rpcCall = function rpcCall(meta, requestCtor, responseCtor, request, callback) {
     var self = this;
-
-    var lcMethod = method.substring(0, 1).toLowerCase() + method.substring(1);
-    var impl = self.rpcServerImpl[method] || self.rpcServerImpl[lcMethod];
+    
+    var lcMethod = meta.method.substring(0, 1).toLowerCase() + meta.method.substring(1);
+    var impl = self.rpcServerImpl[meta.method] || self.rpcServerImpl[lcMethod];
 
     if (!request)
         throw TypeError("request must be specified");
 
     if (!callback)
-        return util.asPromise(rpcCall, self, method, requestCtor, responseCtor, request);
+        return util.asPromise(rpcCall, self, meta, requestCtor, responseCtor, request);
 
     if(!impl || typeof impl !== "function"){
-      return callback("Method " + method + " not implemented");
+      return callback("Method " + meta.method + " not implemented");
     }
 
     try {
         request = requestCtor.decode(request);
         request = requestCtor.toObject(request, {longs: Number, enums: String, bytes: Array, defaults: true});
-        impl(request, function rpcCallback(err, response){
+        impl(meta.ctx, request, function rpcCallback(err, response){
 
           if (err) {
-              self.emit("error", err, method);
+              self.emit("error", err, meta.method);
               return callback(err);
           }
 
@@ -66,15 +66,15 @@ Server.prototype.rpcCall = function rpcCall(method, requestCtor, responseCtor, r
           try {
               response = responseCtor.encode(response).finish();
           } catch (err) {
-              self.emit("error", err, method);
+              self.emit("error", err, meta.method);
               return callback(err);
           }
 
-          self.emit("data", response, method);
+          self.emit("data", response, meta.method);
           return callback(null, response);
         }, responseCtor.verify);
     } catch (err) {
-        self.emit("error", err, method);
+        self.emit("error", err, meta.method);
         setTimeout(function() { callback(err); }, 0);
         return undefined;
     }

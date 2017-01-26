@@ -574,9 +574,9 @@ function buildServer(ref, service) {
           "@param {" + cbName + "} callback Node-style callback called with the error, if any, and " + method.resolvedResponseType.name,
           "@returns {undefined}"
       ]);
-      push(name(service.name) + "Server.prototype" + util.safeProp(mName) + " = function " + name(mName) + "(request, callback) {");
+      push(name(service.name) + "Server.prototype" + util.safeProp(mName) + " = function " + name(mName) + "(ctx, request, callback) {");
           ++indent;
-          push("return this.rpcCall(\"" + name(method.name) + "\", $root" + method.resolvedRequestType.fullName + ", $root" + method.resolvedResponseType.fullName + ", request, callback);");
+          push("return this.rpcCall({ctx: ctx, method: \"" + name(method.name) + "\"}, $root" + method.resolvedRequestType.fullName + ", $root" + method.resolvedResponseType.fullName + ", request, callback);");
           --indent;
       push("};");
       if (config.comments)
