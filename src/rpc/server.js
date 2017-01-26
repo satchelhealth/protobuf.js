@@ -42,7 +42,9 @@ Server.prototype.rpcCall = function rpcCall(method, requestCtor, responseCtor, r
     }
 
     try {
-        self.rpcServerImpl[method](requestCtor.decode(request), function rpcCallback(err, response){
+        request = requestCtor.decode(request);
+        request = requestCtor.toObject(request, {longs: Number, enums: String, bytes: Array, defaults: true});
+        self.rpcServerImpl[method](request, function rpcCallback(err, response){
 
           if (err) {
               self.emit("error", err, method);

@@ -121,6 +121,7 @@ Service.prototype.rpcCall = function rpcCall(method, requestCtor, responseCtor, 
                 if (!(response instanceof responseCtor)) {
                     try {
                         response = responseCtor[self.responseDelimited ? "decodeDelimited" : "decode"](response);
+                        response = responseCtor.toObject(response, {longs: Number, enums: String, bytes: Array, defaults: true});
                     } catch (err) {
                         self.emit("error", err, method);
                         return callback("error", err);
