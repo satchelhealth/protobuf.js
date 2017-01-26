@@ -37,6 +37,10 @@ Server.prototype.rpcCall = function rpcCall(method, requestCtor, responseCtor, r
     if (!callback)
         return util.asPromise(rpcCall, self, method, requestCtor, responseCtor, request);
 
+    if(!self.rpcServerImpl[method] || typeof self.rpcServerImpl[method] !== "function"){
+      return callback("Method " + method + " not implemented");
+    }
+
     try {
         self.rpcServerImpl[method](requestCtor.decode(request), function rpcCallback(err, response){
 
