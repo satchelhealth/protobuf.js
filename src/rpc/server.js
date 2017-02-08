@@ -30,7 +30,7 @@ function Server(rpcServerImpl) {
  */
 Server.prototype.rpcCall = function rpcCall(meta, requestCtor, responseCtor, request, callback) {
     var self = this;
-    
+
     var lcMethod = meta.method.substring(0, 1).toLowerCase() + meta.method.substring(1);
     var impl = self.rpcServerImpl[meta.method] || self.rpcServerImpl[lcMethod];
 
@@ -46,7 +46,7 @@ Server.prototype.rpcCall = function rpcCall(meta, requestCtor, responseCtor, req
 
     try {
         request = requestCtor.decode(request);
-        request = requestCtor.toObject(request, {longs: Number, enums: String, bytes: Array, defaults: true});
+        request = requestCtor.toObject(request, {longs: Number, bytes: Array, defaults: true});
         impl(meta.ctx, request, function rpcCallback(err, response){
 
           if (err) {
