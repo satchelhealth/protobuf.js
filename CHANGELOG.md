@@ -1,9 +1,36 @@
+# [6.6.3](https://github.com/dcodeIO/protobuf.js/releases/tag/6.6.3)
+
+## Fixed
+[:hash:](https://github.com/dcodeIO/protobuf.js/commit/0be01a14915e3e510038808fedbc67192a182d9b) Support node 4.2.0 to 4.4.7 buffers + travis case, see [#665](https://github.com/dcodeIO/protobuf.js/issues/665)<br />
+
+## CLI
+[:hash:](https://github.com/dcodeIO/protobuf.js/commit/6a0920b2c32e7963741693f5a773b89f4b262688) Added ES6 syntax flag to pbjs, see [#667](https://github.com/dcodeIO/protobuf.js/issues/667)<br />
+
+## Docs
+[:hash:](https://github.com/dcodeIO/protobuf.js/commit/c365242bdc28a47f5c6ab91bae34c277d1044eb3) Reference Buffer for BufferReader/Writer, see [#668](https://github.com/dcodeIO/protobuf.js/issues/668)<br />
+[:hash:](https://github.com/dcodeIO/protobuf.js/commit/43976072d13bb760a0689b54cc35bdea6817ca0d) Slightly shortened README<br />
+[:hash:](https://github.com/dcodeIO/protobuf.js/commit/e64cf65b09047755899ec2330ca0fc2f4d7932c2) Additional notes on the distinction of different use cases / distributions, see [#666](https://github.com/dcodeIO/protobuf.js/issues/666)<br />
+[:hash:](https://github.com/dcodeIO/protobuf.js/commit/83758c99275c2bbd30f63ea1661284578f5c9d91) Extended README with additional information on JSON format<br />
+[:hash:](https://github.com/dcodeIO/protobuf.js/commit/fdc3102689e8a3e8345eee5ead07ba3c9c3fe80c) Added extended usage instructions for TypeScript and custom classes to README, see [#666](https://github.com/dcodeIO/protobuf.js/issues/666)<br />
+
+## Other
+[:hash:](https://github.com/dcodeIO/protobuf.js/commit/3701488cca6bc56ce6b7ad93c7b80e16de2571a7) Updated dist files<br />
+[:hash:](https://github.com/dcodeIO/protobuf.js/commit/579068a45e285c7d2c69b359716dd6870352f46f) Updated test cases to use new buffer util<br />
+[:hash:](https://github.com/dcodeIO/protobuf.js/commit/0be01a14915e3e510038808fedbc67192a182d9b) Added fetch test cases + some test cleanup<br />
+
 # [6.6.2](https://github.com/dcodeIO/protobuf.js/releases/tag/6.6.2)
 
 ## Fixed
+[:hash:](https://github.com/dcodeIO/protobuf.js/commit/3aea1bf3d4920dc01603fda25b86e6436ae45ec2) Properly replace short vars when beautifying static code, see [#663](https://github.com/dcodeIO/protobuf.js/issues/663)<br />
+[:hash:](https://github.com/dcodeIO/protobuf.js/commit/b6cf228a82152f72f21b1b307983126395313470) Use custom prelude in order to exclude any module loader code from source (for webpack), see [#658](https://github.com/dcodeIO/protobuf.js/issues/658)<br />
 [:hash:](https://github.com/dcodeIO/protobuf.js/commit/2b12fb7db9d4eaa3b76b7198539946e97db684c4) Make sure to check optional inner messages for null when encoding, see [#658](https://github.com/dcodeIO/protobuf.js/issues/658)<br />
 
+## New
+[:hash:](https://github.com/dcodeIO/protobuf.js/commit/276a594771329da8334984771cb536de7322d5b4) Initial attempt on a backwards compatible fetch implementation with binary support, see [#661](https://github.com/dcodeIO/protobuf.js/issues/661)<br />
+
 ## Other
+[:hash:](https://github.com/dcodeIO/protobuf.js/commit/2d81864fa5c4dac75913456d582e0bea9cf0dd80) Root#resolvePath skips files when returning null, see [#368](https://github.com/dcodeIO/protobuf.js/issues/368)<br />
+[:hash:](https://github.com/dcodeIO/protobuf.js/commit/aab3ec1a757aff0f11402c3fb943c003f092c1af) Changes callback on failed response decode in rpc service to pass actual error instead of 'error' string<br />
 [:hash:](https://github.com/dcodeIO/protobuf.js/commit/9044178c052299670108f10621d6e9b3d56e8a40) Travis should exit with the respective error when running sauce tests<br />
 [:hash:](https://github.com/dcodeIO/protobuf.js/commit/73721f12072d77263e72a3b27cd5cf9409db9f8b) Moved checks whether a test case is applicable to parent case<br />
 [:hash:](https://github.com/dcodeIO/protobuf.js/commit/3fcd88c3f9b1a084b06cab2d5881cb5bb895869d) Added eventemitter tests and updated micromodule dependencies (so far)<br />

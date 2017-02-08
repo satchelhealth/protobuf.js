@@ -4,9 +4,7 @@
 var $protobuf = require("../../minimal");
 
 // Common aliases
-var $Reader = $protobuf.Reader,
-    $Writer = $protobuf.Writer,
-    $util   = $protobuf.util;
+var $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
 
 // Lazily resolved type references
 var $lazyTypes = [];
@@ -177,8 +175,7 @@ $root.jspb = (function() {
          * @property {number} BAR=2 BAR value
          */
         test.OuterEnum = (function() {
-            var valuesById = {},
-                values = Object.create(valuesById);
+            var valuesById = {}, values = Object.create(valuesById);
             values[valuesById[1] = "FOO"] = 1;
             values[valuesById[2] = "BAR"] = 2;
             return values;
@@ -3135,8 +3132,7 @@ $root.jspb = (function() {
              * @property {number} E2=77 E2 value
              */
             DefaultValues.Enum = (function() {
-                var valuesById = {},
-                    values = Object.create(valuesById);
+                var valuesById = {}, values = Object.create(valuesById);
                 values[valuesById[13] = "E1"] = 13;
                 values[valuesById[77] = "E2"] = 77;
                 return values;
@@ -6141,7 +6137,7 @@ $root.jspb = (function() {
                     var key = Object.keys(message.mapStringString);
                     for (var i = 0; i < key.length; ++i)
                         if (!$util.isString(message.mapStringString[key[i]]))
-                            return "mapStringString: string{key:string} expected";
+                            return "mapStringString: string{k:string} expected";
                 }
                 if (message.mapStringInt32 !== undefined) {
                     if (!$util.isObject(message.mapStringInt32))
@@ -6149,7 +6145,7 @@ $root.jspb = (function() {
                     var key = Object.keys(message.mapStringInt32);
                     for (var i = 0; i < key.length; ++i)
                         if (!$util.isInteger(message.mapStringInt32[key[i]]))
-                            return "mapStringInt32: integer{key:string} expected";
+                            return "mapStringInt32: integer{k:string} expected";
                 }
                 if (message.mapStringInt64 !== undefined) {
                     if (!$util.isObject(message.mapStringInt64))
@@ -6157,7 +6153,7 @@ $root.jspb = (function() {
                     var key = Object.keys(message.mapStringInt64);
                     for (var i = 0; i < key.length; ++i)
                         if (!$util.isInteger(message.mapStringInt64[key[i]]) && !(message.mapStringInt64[key[i]] && $util.isInteger(message.mapStringInt64[key[i]].low) && $util.isInteger(message.mapStringInt64[key[i]].high)))
-                            return "mapStringInt64: integer|Long{key:string} expected";
+                            return "mapStringInt64: integer|Long{k:string} expected";
                 }
                 if (message.mapStringBool !== undefined) {
                     if (!$util.isObject(message.mapStringBool))
@@ -6165,7 +6161,7 @@ $root.jspb = (function() {
                     var key = Object.keys(message.mapStringBool);
                     for (var i = 0; i < key.length; ++i)
                         if (typeof message.mapStringBool[key[i]] !== "boolean")
-                            return "mapStringBool: boolean{key:string} expected";
+                            return "mapStringBool: boolean{k:string} expected";
                 }
                 if (message.mapStringDouble !== undefined) {
                     if (!$util.isObject(message.mapStringDouble))
@@ -6173,7 +6169,7 @@ $root.jspb = (function() {
                     var key = Object.keys(message.mapStringDouble);
                     for (var i = 0; i < key.length; ++i)
                         if (typeof message.mapStringDouble[key[i]] !== "number")
-                            return "mapStringDouble: number{key:string} expected";
+                            return "mapStringDouble: number{k:string} expected";
                 }
                 if (message.mapStringEnum !== undefined) {
                     if (!$util.isObject(message.mapStringEnum))
@@ -6182,7 +6178,7 @@ $root.jspb = (function() {
                     for (var i = 0; i < key.length; ++i)
                         switch (message.mapStringEnum[key[i]]) {
                         default:
-                            return "mapStringEnum: enum value{key:string} expected";
+                            return "mapStringEnum: enum value{k:string} expected";
                         case 0:
                         case 1:
                         case 2:
@@ -6205,9 +6201,9 @@ $root.jspb = (function() {
                     var key = Object.keys(message.mapInt32String);
                     for (var i = 0; i < key.length; ++i) {
                         if (!/^-?(?:0|[1-9][0-9]*)$/.test(key[i]))
-                            return "mapInt32String: integer key{key:int32} expected";
+                            return "mapInt32String: integer key{k:int32} expected";
                         if (!$util.isString(message.mapInt32String[key[i]]))
-                            return "mapInt32String: string{key:int32} expected";
+                            return "mapInt32String: string{k:int32} expected";
                     }
                 }
                 if (message.mapInt64String !== undefined) {
@@ -6216,9 +6212,9 @@ $root.jspb = (function() {
                     var key = Object.keys(message.mapInt64String);
                     for (var i = 0; i < key.length; ++i) {
                         if (!/^(?:[\x00-\xff]{8}|-?(?:0|[1-9][0-9]*))$/.test(key[i]))
-                            return "mapInt64String: integer|Long key{key:int64} expected";
+                            return "mapInt64String: integer|Long key{k:int64} expected";
                         if (!$util.isString(message.mapInt64String[key[i]]))
-                            return "mapInt64String: string{key:int64} expected";
+                            return "mapInt64String: string{k:int64} expected";
                     }
                 }
                 if (message.mapBoolString !== undefined) {
@@ -6227,9 +6223,9 @@ $root.jspb = (function() {
                     var key = Object.keys(message.mapBoolString);
                     for (var i = 0; i < key.length; ++i) {
                         if (!/^true|false|0|1$/.test(key[i]))
-                            return "mapBoolString: boolean key{key:bool} expected";
+                            return "mapBoolString: boolean key{k:bool} expected";
                         if (!$util.isString(message.mapBoolString[key[i]]))
-                            return "mapBoolString: string{key:bool} expected";
+                            return "mapBoolString: string{k:bool} expected";
                     }
                 }
                 if (message.testMapFields !== undefined && message.testMapFields !== null) {
@@ -6497,8 +6493,7 @@ $root.jspb = (function() {
          * @property {number} MAP_VALUE_BAZ_NOBINARY=2 MAP_VALUE_BAZ_NOBINARY value
          */
         test.MapValueEnumNoBinary = (function() {
-            var valuesById = {},
-                values = Object.create(valuesById);
+            var valuesById = {}, values = Object.create(valuesById);
             values[valuesById[0] = "MAP_VALUE_FOO_NOBINARY"] = 0;
             values[valuesById[1] = "MAP_VALUE_BAR_NOBINARY"] = 1;
             values[valuesById[2] = "MAP_VALUE_BAZ_NOBINARY"] = 2;
@@ -9177,8 +9172,7 @@ $root.google = (function() {
              * @property {number} TYPE_SINT64=18 TYPE_SINT64 value
              */
             FieldDescriptorProto.Type = (function() {
-                var valuesById = {},
-                    values = Object.create(valuesById);
+                var valuesById = {}, values = Object.create(valuesById);
                 values[valuesById[1] = "TYPE_DOUBLE"] = 1;
                 values[valuesById[2] = "TYPE_FLOAT"] = 2;
                 values[valuesById[3] = "TYPE_INT64"] = 3;
@@ -9210,8 +9204,7 @@ $root.google = (function() {
              * @property {number} LABEL_REPEATED=3 LABEL_REPEATED value
              */
             FieldDescriptorProto.Label = (function() {
-                var valuesById = {},
-                    values = Object.create(valuesById);
+                var valuesById = {}, values = Object.create(valuesById);
                 values[valuesById[1] = "LABEL_OPTIONAL"] = 1;
                 values[valuesById[2] = "LABEL_REQUIRED"] = 2;
                 values[valuesById[3] = "LABEL_REPEATED"] = 3;
@@ -10827,8 +10820,7 @@ $root.google = (function() {
              * @property {number} LITE_RUNTIME=3 LITE_RUNTIME value
              */
             FileOptions.OptimizeMode = (function() {
-                var valuesById = {},
-                    values = Object.create(valuesById);
+                var valuesById = {}, values = Object.create(valuesById);
                 values[valuesById[1] = "SPEED"] = 1;
                 values[valuesById[2] = "CODE_SIZE"] = 2;
                 values[valuesById[3] = "LITE_RUNTIME"] = 3;
@@ -11447,8 +11439,7 @@ $root.google = (function() {
              * @property {number} STRING_PIECE=2 STRING_PIECE value
              */
             FieldOptions.CType = (function() {
-                var valuesById = {},
-                    values = Object.create(valuesById);
+                var valuesById = {}, values = Object.create(valuesById);
                 values[valuesById[0] = "STRING"] = 0;
                 values[valuesById[1] = "CORD"] = 1;
                 values[valuesById[2] = "STRING_PIECE"] = 2;
@@ -11465,8 +11456,7 @@ $root.google = (function() {
              * @property {number} JS_NUMBER=2 JS_NUMBER value
              */
             FieldOptions.JSType = (function() {
-                var valuesById = {},
-                    values = Object.create(valuesById);
+                var valuesById = {}, values = Object.create(valuesById);
                 values[valuesById[0] = "JS_NORMAL"] = 0;
                 values[valuesById[1] = "JS_STRING"] = 1;
                 values[valuesById[2] = "JS_NUMBER"] = 2;
@@ -12567,8 +12557,7 @@ $root.google = (function() {
              * @property {number} IDEMPOTENT=2 IDEMPOTENT value
              */
             MethodOptions.IdempotencyLevel = (function() {
-                var valuesById = {},
-                    values = Object.create(valuesById);
+                var valuesById = {}, values = Object.create(valuesById);
                 values[valuesById[0] = "IDEMPOTENCY_UNKNOWN"] = 0;
                 values[valuesById[1] = "NO_SIDE_EFFECTS"] = 1;
                 values[valuesById[2] = "IDEMPOTENT"] = 2;

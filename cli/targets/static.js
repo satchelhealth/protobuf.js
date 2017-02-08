@@ -4,7 +4,7 @@ module.exports = static_target;
 var protobuf   = require("../.."),
     cliUtil    = require("../util"),
     UglifyJS   = require("uglify-js"),
-    esprima    = require("esprima"),
+    espree     = require("espree"),
     escodegen  = require("escodegen"),
     estraverse = require("estraverse");
 
@@ -25,13 +25,11 @@ function static_target(root, options, callback) {
     try {
         if (config.comments)
             push("// Common aliases");
-        push("var $Reader = $protobuf.Reader,");
-        push("    $Writer = $protobuf.Writer,");
-        push("    $util   = $protobuf.util;");
+        push((config.es6 ? "const" : "var") + " $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;");
         push("");
         if (config.comments)
             push("// Lazily resolved type references");
-        push("var $lazyTypes = [];");
+        push((config.es6 ? "const" : "var") + " $lazyTypes = [];");
         push("");
         if (config.comments) {
             if (root.comment)
@@ -40,7 +38,7 @@ function static_target(root, options, callback) {
                 push("// Exported root namespace");
         }
         var rootProp = cliUtil.safeProp(config.root || "default");
-        push("var $root = $protobuf.roots" + rootProp + " || ($protobuf.roots" + rootProp + " = {});");
+        push((config.es6 ? "const" : "var") + " $root = $protobuf.roots" + rootProp + " || ($protobuf.roots" + rootProp + " = {});");
         buildNamespace(null, root);
         push("");
         if (config.comments)
@@ -121,7 +119,7 @@ function buildNamespace(ref, ns, buildServiceAsServer) {
             "@exports " + ns.fullName.substring(1),
             "@namespace"
         ]);
-        push("var " + name(ns.name) + " = {};");
+        push((config.es6 ? "const" : "var") + " " + name(ns.name) + " = {};");
     }
 
     ns.nestedArray.forEach(function(nested) {
@@ -153,24 +151,23 @@ var reduceableBlockStatements = {
     WhileStatement: true
 };
 
+var shortVars = {
+    "r": "reader",
+    "w": "writer",
+    "m": "message",
+    "t": "tag",
+    "l": "length",
+    "c": "end", "c2": "end2",
+    "k": "key",
+    "ks": "keys", "ks2": "keys2",
+    "e": "error",
+    "f": "impl",
+    "o": "options",
+    "d": "object",
+    "n": "long"
+};
+
 function beautifyCode(code) {
-    // Rename short vars
-    code = code
-        .replace(/\b(?!\\)r\b/g, "reader")
-        .replace(/\b(?!\\)w\b/g, "writer")
-        .replace(/\b(?!\\)m\b/g, "message")
-        .replace(/\b(?!\\)t\b/g, "tag")
-        .replace(/\b(?!\\)l\b/g, "length")
-        .replace(/\b(?!\\)c\b/g, "end")
-        .replace(/\b(?!\\)c2\b/g, "end2")
-        .replace(/\b(?!\\)k\b/g, "key")
-        .replace(/\b(?!\\)ks\b/g, "keys")
-        .replace(/\b(?!\\)ks2\b/g, "keys2")
-        .replace(/\b(?!\\)e\b/g, "error")
-        .replace(/\b(?!\\)f\b/g, "impl")
-        .replace(/\b(?!\\)o\b/g, "options")
-        .replace(/\b(?!\\)d\b/g, "object")
-        .replace(/\b(?!\\)n\b/g, "long");
     // Add semicolons
     code = UglifyJS.minify(code, {
         fromString: true,
@@ -181,9 +178,20 @@ function beautifyCode(code) {
         }
     }).code;
     // Properly beautify
-    var ast = esprima.parse(code);
+    var ast = espree.parse(code);
     estraverse.replace(ast, {
         enter: function(node, parent) {
+            // rename short vars
+            if (node.type === "Identifier" && parent.property !== node && shortVars[node.name])
+                return {
+                    "type": "Identifier",
+                    "name": shortVars[node.name]
+                };
+            // replace var with let if es6
+            if (config.es6 && node.type === "VariableDeclaration" && node.kind === "var") {
+                node.kind = "let";
+                return undefined;
+            }
             // remove braces around block statements with a single child
             if (node.type === "BlockStatement" && reduceableBlockStatements[parent.type] && node.body.length === 1)
                 return node.body[0];
@@ -293,7 +301,7 @@ function buildType(ref, type) {
         ++indent;
         push("if (properties)");
             ++indent;
-            push("for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)");
+            push("for (" + (config.es6 ? "let" : "var") + " keys = Object.keys(properties), i = 0; i < keys.length; ++i)");
                 ++indent;
                 push("this[keys[i]] = properties[keys[i]];");
                 --indent;
@@ -339,14 +347,14 @@ function buildType(ref, type) {
     });
 
     // virtual oneof fields
-    var firstOneOf = true;;
+    var firstOneOf = true;
     type.oneofsArray.forEach(function(oneof) {
         if (firstOneOf) {
             firstOneOf = false;
             push("");
             if (config.comments)
                 push("// OneOf field names bound to virtual getters and setters");
-            push("var $oneOfFields;");
+            push((config.es6 ? "let" : "var") + " $oneOfFields;");
         }
         oneof.resolve();
         push("");
@@ -376,7 +384,7 @@ function buildType(ref, type) {
         push("");
         if (config.comments)
             push("// Lazily resolved type references");
-        push("var $types = {");
+        push((config.es6 ? "const" : "var") + " $types = {");
         ++indent;
             types.forEach(function(line, i) {
                 push(line + (i === types.length - 1 ? "" : ","));
@@ -694,8 +702,7 @@ function buildEnum(ref, enm) {
     pushComment(comment);
     push(name(ref) + "." + name(enm.name) + " = (function() {");
     ++indent;
-        push("var valuesById = {},");
-        push("    values = Object.create(valuesById);");
+        push((config.es6 ? "const" : "var") + " valuesById = {}, values = Object.create(valuesById);");
         Object.keys(enm.values).forEach(function(key) {
             var val = enm.values[key];
             push("values[valuesById[" + val + "] = " + JSON.stringify(key) + "] = " + val + ";");

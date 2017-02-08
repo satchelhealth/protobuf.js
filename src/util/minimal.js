@@ -1,27 +1,39 @@
 "use strict";
 var util = exports;
 
-util.asPromise    = require("@protobufjs/aspromise");
-util.base64       = require("@protobufjs/base64");
-util.EventEmitter = require("@protobufjs/eventemitter");
-util.inquire      = require("@protobufjs/inquire");
-util.utf8         = require("@protobufjs/utf8");
-util.pool         = require("@protobufjs/pool");
+// used to return a Promise where callback is omitted
+util.asPromise = require("@protobufjs/aspromise");
 
-util.LongBits     = require("./longbits");
+// converts to / from base64 encoded strings
+util.base64 = require("@protobufjs/base64");
+
+// base class of rpc.Service
+util.EventEmitter = require("@protobufjs/eventemitter");
+
+// requires modules optionally and hides the call from bundlers
+util.inquire = require("@protobufjs/inquire");
+
+// convert to / from utf8 encoded strings
+util.utf8 = require("@protobufjs/utf8");
+
+// provides a node-like buffer pool in the browser
+util.pool = require("@protobufjs/pool");
+
+// utility to work with the low and high bits of a 64 bit value
+util.LongBits = require("./longbits");
 
 /**
  * An immuable empty array.
  * @memberof util
  * @type {Array.<*>}
  */
-util.emptyArray = Object.freeze ? Object.freeze([]) : /* istanbul ignore next */ [];
+util.emptyArray = Object.freeze ? Object.freeze([]) : /* istanbul ignore next */ []; // used on prototypes
 
 /**
  * An immutable empty object.
  * @type {Object}
  */
-util.emptyObject = Object.freeze ? Object.freeze({}) : /* istanbul ignore next */ {};
+util.emptyObject = Object.freeze ? Object.freeze({}) : /* istanbul ignore next */ {}; // used on prototypes
 
 /**
  * Whether running within node or not.
@@ -65,21 +77,8 @@ util.isObject = function isObject(value) {
 util.Buffer = (function() {
     try {
         var Buffer = util.inquire("buffer").Buffer;
-
-        /* istanbul ignore next */
-        if (!Buffer.prototype.utf8Write) // refuse to use non-node buffers (performance)
-            return null;
-
-        /* istanbul ignore next */
-        if (!Buffer.from)
-            Buffer.from = function from(value, encoding) { return new Buffer(value, encoding); };
-
-        /* istanbul ignore next */
-        if (!Buffer.allocUnsafe)
-            Buffer.allocUnsafe = function allocUnsafe(size) { return new Buffer(size); };
-
-        return Buffer;
-
+        // refuse to use non-node buffers if not explicitly assigned (perf reasons):
+        return Buffer.prototype.utf8Write ? Buffer : /* istanbul ignore next */ null;
     } catch (e) {
         /* istanbul ignore next */
         return null;
@@ -87,18 +86,37 @@ util.Buffer = (function() {
 })();
 
 /**
+ * Internal alias of or polyfull for Buffer.from.
+ * @type {?function}
+ * @param {string|number[]} value Value
+ * @param {string} [encoding] Encoding if value is a string
+ * @returns {Uint8Array}
+ * @private
+ */
+util._Buffer_from = null;
+
+/**
+ * Internal alias of or polyfill for Buffer.allocUnsafe.
+ * @type {?function}
+ * @param {number} size Buffer size
+ * @returns {Uint8Array}
+ * @private
+ */
+util._Buffer_allocUnsafe = null;
+
+/**
  * Creates a new buffer of whatever type supported by the environment.
  * @param {number|number[]} [sizeOrArray=0] Buffer size or number array
- * @returns {Uint8Array} Buffer
+ * @returns {Uint8Array|Buffer} Buffer
  */
 util.newBuffer = function newBuffer(sizeOrArray) {
     /* istanbul ignore next */
     return typeof sizeOrArray === "number"
         ? util.Buffer
-            ? util.Buffer.allocUnsafe(sizeOrArray) // polyfilled
+            ? util._Buffer_allocUnsafe(sizeOrArray)
             : new util.Array(sizeOrArray)
         : util.Buffer
-            ? util.Buffer.from(sizeOrArray) // polyfilled
+            ? util._Buffer_from(sizeOrArray)
             : typeof Uint8Array === "undefined"
                 ? sizeOrArray
                 : new Uint8Array(sizeOrArray);
@@ -224,11 +242,32 @@ util.lazyResolve = function lazyResolve(root, lazyTypes) {
 };
 
 /**
- * Default conversion options used for toJSON implementations.
+ * Default conversion options used for toJSON implementations. Converts longs, enums and bytes to strings.
  * @type {ConversionOptions}
  */
 util.toJSONOptions = {
     longs: String,
     enums: String,
     bytes: String
+};
+
+util._configure = function() {
+    var Buffer = util.Buffer;
+    /* istanbul ignore if */
+    if (!Buffer) {
+        util._Buffer_from = util._Buffer_allocUnsafe = null;
+        return;
+    }
+    // because node 4.x buffers are incompatible & immutable
+    // see: https://github.com/dcodeIO/protobuf.js/pull/665
+    util._Buffer_from = Buffer.from !== Uint8Array.from && Buffer.from ||
+        /* istanbul ignore next */
+        function Buffer_from(value, encoding) {
+            return new Buffer(value, encoding);
+        };
+    util._Buffer_allocUnsafe = Buffer.allocUnsafe ||
+        /* istanbul ignore next */
+        function Buffer_allocUnsafe(size) {
+            return new Buffer(size);
+        };
 };

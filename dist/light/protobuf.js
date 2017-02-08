@@ -1,6 +1,6 @@
 /*!
- * protobuf.js v6.6.2 (c) 2016, Daniel Wirtz
- * Compiled Thu, 26 Jan 2017 16:36:58 UTC
+ * protobuf.js v6.6.4 (c) 2016, Daniel Wirtz
+ * Compiled Fri, 03 Feb 2017 17:27:04 UTC
  * Licensed under the BSD-3-Clause License
  * see: https://github.com/dcodeIO/protobuf.js for details
  */
@@ -448,39 +448,103 @@ var fs = inquire("fs");
  */
 
 /**
+ * Options as used by {@link util.fetch}.
+ * @typedef FetchOptions
+ * @type {Object}
+ * @property {boolean} [binary=false] Whether expecting a binary response
+ * @property {boolean} [xhr=false] If `true`, forces the use of XMLHttpRequest
+ */
+
+/**
  * Fetches the contents of a file.
  * @memberof util
- * @param {string} path File path or url
- * @param {FetchCallback} [callback] Callback function
- * @returns {Promise<string>|undefined} A Promise if `callback` has been omitted
+ * @param {string} filename File path or url
+ * @param {FetchOptions} options Fetch options
+ * @param {FetchCallback} callback Callback function
+ * @returns {undefined}
  */
-function fetch(path, callback) {
+function fetch(filename, options, callback) {
+    if (typeof options === "function") {
+        callback = options;
+        options = {};
+    } else if (!options)
+        options = {};
+
     if (!callback)
-        return asPromise(fetch, this, path); // eslint-disable-line no-invalid-this
-    if (fs && fs.readFile)
-        return fs.readFile(path, "utf8", function fetchReadFileCallback(err, contents) {
+        return asPromise(fetch, this, filename, options); // eslint-disable-line no-invalid-this
+
+    // if a node-like filesystem is present, try it first but fall back to XHR if nothing is found.
+    if (!options.xhr && fs && fs.readFile)
+        return fs.readFile(filename, function fetchReadFileCallback(err, contents) {
             return err && typeof XMLHttpRequest !== "undefined"
-                ? fetch_xhr(path, callback)
-                : callback(err, contents);
+                ? fetch.xhr(filename, options, callback)
+                : err
+                ? callback(err)
+                : callback(null, options.binary ? contents : contents.toString("utf8"));
         });
-    return fetch_xhr(path, callback);
+
+    // use the XHR version otherwise.
+    return fetch.xhr(filename, options, callback);
 }
 
-function fetch_xhr(path, callback) {
+/**
+ * Fetches the contents of a file.
+ * @name util.fetch
+ * @function
+ * @param {string} path File path or url
+ * @param {FetchCallback} callback Callback function
+ * @returns {undefined}
+ * @variation 2
+ */
+
+/**
+ * Fetches the contents of a file.
+ * @name util.fetch
+ * @function
+ * @param {string} path File path or url
+ * @param {FetchOptions} [options] Fetch options
+ * @returns {Promise<string|Uint8Array>} Promise
+ * @variation 3
+ */
+
+/**/
+fetch.xhr = function fetch_xhr(filename, options, callback) {
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange /* works everywhere */ = function fetchOnReadyStateChange() {
-        return xhr.readyState === 4
-            ? xhr.status === 0 || xhr.status === 200
-            ? callback(null, xhr.responseText)
-            : callback(Error("status " + xhr.status))
-            : undefined;
+
+        if (xhr.readyState !== 4)
+            return undefined;
+
         // local cors security errors return status 0 / empty string, too. afaik this cannot be
         // reliably distinguished from an actually empty file for security reasons. feel free
         // to send a pull request if you are aware of a solution.
+        if (xhr.status !== 0 && xhr.status !== 200)
+            return callback(Error("status " + xhr.status));
+
+        // if binary data is expected, make sure that some sort of array is returned, even if
+        // ArrayBuffers are not supported. the binary string fallback, however, is unsafe.
+        if (options.binary) {
+            var buffer = xhr.response;
+            if (!buffer) {
+                buffer = [];
+                for (var i = 0; i < xhr.responseText.length; ++i)
+                    buffer.push(xhr.responseText.charCodeAt(i) & 255);
+            }
+            return callback(null, typeof Uint8Array !== "undefined" ? new Uint8Array(buffer) : buffer);
+        }
+        return callback(null, xhr.responseText);
     };
-    xhr.open("GET", path);
+
+    if (options.binary) {
+        // ref: https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/Sending_and_Receiving_Binary_Data#Receiving_binary_data_in_older_browsers
+        if ("overrideMimeType" in xhr)
+            xhr.overrideMimeType("text/plain; charset=x-user-defined");
+        xhr.responseType = "arraybuffer";
+    }
+
+    xhr.open("GET", filename);
     xhr.send();
-}
+};
 
 },{"1":1,"6":6}],6:[function(require,module,exports){
 "use strict";
@@ -1920,6 +1984,7 @@ protobuf.configure    = configure;
  */
 function configure() {
     protobuf.Reader._configure(protobuf.BufferReader);
+    protobuf.util._configure();
 }
 
 // Configure serialization
@@ -3024,8 +3089,8 @@ function Reader(buffer) {
 /**
  * Creates a new reader using the specified buffer.
  * @function
- * @param {Uint8Array} buffer Buffer to read from
- * @returns {BufferReader|Reader} A {@link BufferReader} if `buffer` is a Buffer, otherwise a {@link Reader}
+ * @param {Uint8Array|Buffer} buffer Buffer to read from
+ * @returns {Reader|BufferReader} A {@link BufferReader} if `buffer` is a Buffer, otherwise a {@link Reader}
  */
 Reader.create = util.Buffer
     ? function create_buffer_setup(buffer) {
@@ -3505,6 +3570,12 @@ var util = require(34);
  */
 function BufferReader(buffer) {
     Reader.call(this, buffer);
+
+    /**
+     * Read buffer.
+     * @name BufferReader#buf
+     * @type {Buffer}
+     */
 }
 
 /* istanbul ignore else */
@@ -3518,6 +3589,13 @@ BufferReader.prototype.string = function read_string_buffer() {
     var len = this.uint32(); // modifies pos
     return this.buf.utf8Slice(this.pos, this.pos = Math.min(this.pos + len, this.len));
 };
+
+/**
+ * Reads a sequence of bytes preceeded by its length as a varint.
+ * @name BufferReader#bytes
+ * @function
+ * @returns {Buffer} Value read
+ */
 
 },{"24":24,"34":34}],26:[function(require,module,exports){
 "use strict";
@@ -3578,7 +3656,7 @@ Root.fromJSON = function fromJSON(json, root) {
  * @function
  * @param {string} origin The file name of the importing file
  * @param {string} target The file name being imported
- * @returns {string} Resolved path to `target`
+ * @returns {?string} Resolved path to `target` or `null` to skip the file
  */
 Root.prototype.resolvePath = util.path.resolve;
 
@@ -3626,13 +3704,16 @@ Root.prototype.load = function load(filename, options, callback) {
             else {
                 parse.filename = filename;
                 var parsed = parse(source, self, options),
+                    resolved,
                     i = 0;
                 if (parsed.imports)
                     for (; i < parsed.imports.length; ++i)
-                        fetch(self.resolvePath(filename, parsed.imports[i]));
+                        if (resolved = self.resolvePath(filename, parsed.imports[i]))
+                            fetch(resolved);
                 if (parsed.weakImports)
                     for (i = 0; i < parsed.weakImports.length; ++i)
-                        fetch(self.resolvePath(filename, parsed.weakImports[i]), true);
+                        if (resolved = self.resolvePath(filename, parsed.weakImports[i]))
+                            fetch(resolved, true);
             }
         } catch (err) {
             finish(err);
@@ -3706,8 +3787,9 @@ Root.prototype.load = function load(filename, options, callback) {
     // references anymore, so we can load everything in parallel
     if (util.isString(filename))
         filename = [ filename ];
-    for (var i = 0; i < filename.length; ++i)
-        fetch(self.resolvePath("", filename[i]));
+    for (var i = 0, resolved; i < filename.length; ++i)
+        if (resolved = self.resolvePath("", filename[i]))
+            fetch(resolved);
 
     if (sync)
         return self;
@@ -4025,7 +4107,7 @@ Service.prototype.rpcCall = function rpcCall(method, requestCtor, responseCtor, 
                         response = responseCtor[self.responseDelimited ? "decodeDelimited" : "decode"](response);
                     } catch (err) {
                         self.emit("error", err, method);
-                        return callback("error", err);
+                        return callback(err);
                     }
                 }
 
@@ -5128,27 +5210,39 @@ LongBits.prototype.length = function length() {
 "use strict";
 var util = exports;
 
-util.asPromise    = require(1);
-util.base64       = require(2);
-util.EventEmitter = require(4);
-util.inquire      = require(6);
-util.utf8         = require(9);
-util.pool         = require(8);
+// used to return a Promise where callback is omitted
+util.asPromise = require(1);
 
-util.LongBits     = require(33);
+// converts to / from base64 encoded strings
+util.base64 = require(2);
+
+// base class of rpc.Service
+util.EventEmitter = require(4);
+
+// requires modules optionally and hides the call from bundlers
+util.inquire = require(6);
+
+// convert to / from utf8 encoded strings
+util.utf8 = require(9);
+
+// provides a node-like buffer pool in the browser
+util.pool = require(8);
+
+// utility to work with the low and high bits of a 64 bit value
+util.LongBits = require(33);
 
 /**
  * An immuable empty array.
  * @memberof util
  * @type {Array.<*>}
  */
-util.emptyArray = Object.freeze ? Object.freeze([]) : /* istanbul ignore next */ [];
+util.emptyArray = Object.freeze ? Object.freeze([]) : /* istanbul ignore next */ []; // used on prototypes
 
 /**
  * An immutable empty object.
  * @type {Object}
  */
-util.emptyObject = Object.freeze ? Object.freeze({}) : /* istanbul ignore next */ {};
+util.emptyObject = Object.freeze ? Object.freeze({}) : /* istanbul ignore next */ {}; // used on prototypes
 
 /**
  * Whether running within node or not.
@@ -5192,21 +5286,8 @@ util.isObject = function isObject(value) {
 util.Buffer = (function() {
     try {
         var Buffer = util.inquire("buffer").Buffer;
-
-        /* istanbul ignore next */
-        if (!Buffer.prototype.utf8Write) // refuse to use non-node buffers (performance)
-            return null;
-
-        /* istanbul ignore next */
-        if (!Buffer.from)
-            Buffer.from = function from(value, encoding) { return new Buffer(value, encoding); };
-
-        /* istanbul ignore next */
-        if (!Buffer.allocUnsafe)
-            Buffer.allocUnsafe = function allocUnsafe(size) { return new Buffer(size); };
-
-        return Buffer;
-
+        // refuse to use non-node buffers if not explicitly assigned (perf reasons):
+        return Buffer.prototype.utf8Write ? Buffer : /* istanbul ignore next */ null;
     } catch (e) {
         /* istanbul ignore next */
         return null;
@@ -5214,18 +5295,37 @@ util.Buffer = (function() {
 })();
 
 /**
+ * Internal alias of or polyfull for Buffer.from.
+ * @type {?function}
+ * @param {string|number[]} value Value
+ * @param {string} [encoding] Encoding if value is a string
+ * @returns {Uint8Array}
+ * @private
+ */
+util._Buffer_from = null;
+
+/**
+ * Internal alias of or polyfill for Buffer.allocUnsafe.
+ * @type {?function}
+ * @param {number} size Buffer size
+ * @returns {Uint8Array}
+ * @private
+ */
+util._Buffer_allocUnsafe = null;
+
+/**
  * Creates a new buffer of whatever type supported by the environment.
  * @param {number|number[]} [sizeOrArray=0] Buffer size or number array
- * @returns {Uint8Array} Buffer
+ * @returns {Uint8Array|Buffer} Buffer
  */
 util.newBuffer = function newBuffer(sizeOrArray) {
     /* istanbul ignore next */
     return typeof sizeOrArray === "number"
         ? util.Buffer
-            ? util.Buffer.allocUnsafe(sizeOrArray) // polyfilled
+            ? util._Buffer_allocUnsafe(sizeOrArray)
             : new util.Array(sizeOrArray)
         : util.Buffer
-            ? util.Buffer.from(sizeOrArray) // polyfilled
+            ? util._Buffer_from(sizeOrArray)
             : typeof Uint8Array === "undefined"
                 ? sizeOrArray
                 : new Uint8Array(sizeOrArray);
@@ -5351,13 +5451,34 @@ util.lazyResolve = function lazyResolve(root, lazyTypes) {
 };
 
 /**
- * Default conversion options used for toJSON implementations.
+ * Default conversion options used for toJSON implementations. Converts longs, enums and bytes to strings.
  * @type {ConversionOptions}
  */
 util.toJSONOptions = {
     longs: String,
     enums: String,
     bytes: String
+};
+
+util._configure = function() {
+    var Buffer = util.Buffer;
+    /* istanbul ignore if */
+    if (!Buffer) {
+        util._Buffer_from = util._Buffer_allocUnsafe = null;
+        return;
+    }
+    // because node 4.x buffers are incompatible & immutable
+    // see: https://github.com/dcodeIO/protobuf.js/pull/665
+    util._Buffer_from = Buffer.from !== Uint8Array.from && Buffer.from ||
+        /* istanbul ignore next */
+        function Buffer_from(value, encoding) {
+            return new Buffer(value, encoding);
+        };
+    util._Buffer_allocUnsafe = Buffer.allocUnsafe ||
+        /* istanbul ignore next */
+        function Buffer_allocUnsafe(size) {
+            return new Buffer(size);
+        };
 };
 
 },{"1":1,"2":2,"33":33,"4":4,"6":6,"8":8,"9":9}],35:[function(require,module,exports){
@@ -6119,10 +6240,10 @@ function BufferWriter() {
 /**
  * Allocates a buffer of the specified size.
  * @param {number} size Buffer size
- * @returns {Uint8Array} Buffer
+ * @returns {Buffer} Buffer
  */
 BufferWriter.alloc = function alloc_buffer(size) {
-    return (BufferWriter.alloc = Buffer.allocUnsafe)(size);
+    return (BufferWriter.alloc = util._Buffer_allocUnsafe)(size);
 };
 
 var writeBytesBuffer = Buffer && Buffer.prototype instanceof Uint8Array && Buffer.prototype.set.name === "set"
@@ -6143,7 +6264,7 @@ var writeBytesBuffer = Buffer && Buffer.prototype instanceof Uint8Array && Buffe
  */
 BufferWriter.prototype.bytes = function write_bytes_buffer(value) {
     if (util.isString(value))
-        value = Buffer.from(value, "base64"); // polyfilled
+        value = util._Buffer_from(value, "base64");
     var len = value.length >>> 0;
     this.uint32(len);
     if (len)
@@ -6168,6 +6289,14 @@ BufferWriter.prototype.string = function write_string_buffer(value) {
         this.push(writeStringBuffer, len, value);
     return this;
 };
+
+
+/**
+ * Finishes the write operation.
+ * @name BufferWriter#finish
+ * @function
+ * @returns {Buffer} Finished buffer
+ */
 
 },{"34":34,"36":36}]},{},[16])
 

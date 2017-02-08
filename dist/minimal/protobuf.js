@@ -1,6 +1,6 @@
 /*!
- * protobuf.js v6.6.2 (c) 2016, Daniel Wirtz
- * Compiled Thu, 26 Jan 2017 16:36:58 UTC
+ * protobuf.js v6.6.4 (c) 2016, Daniel Wirtz
+ * Compiled Fri, 03 Feb 2017 17:27:04 UTC
  * Licensed under the BSD-3-Clause License
  * see: https://github.com/dcodeIO/protobuf.js for details
  */
@@ -506,6 +506,7 @@ protobuf.configure    = configure;
  */
 function configure() {
     protobuf.Reader._configure(protobuf.BufferReader);
+    protobuf.util._configure();
 }
 
 // Configure serialization
@@ -558,8 +559,8 @@ function Reader(buffer) {
 /**
  * Creates a new reader using the specified buffer.
  * @function
- * @param {Uint8Array} buffer Buffer to read from
- * @returns {BufferReader|Reader} A {@link BufferReader} if `buffer` is a Buffer, otherwise a {@link Reader}
+ * @param {Uint8Array|Buffer} buffer Buffer to read from
+ * @returns {Reader|BufferReader} A {@link BufferReader} if `buffer` is a Buffer, otherwise a {@link Reader}
  */
 Reader.create = util.Buffer
     ? function create_buffer_setup(buffer) {
@@ -1039,6 +1040,12 @@ var util = require(13);
  */
 function BufferReader(buffer) {
     Reader.call(this, buffer);
+
+    /**
+     * Read buffer.
+     * @name BufferReader#buf
+     * @type {Buffer}
+     */
 }
 
 /* istanbul ignore else */
@@ -1052,6 +1059,13 @@ BufferReader.prototype.string = function read_string_buffer() {
     var len = this.uint32(); // modifies pos
     return this.buf.utf8Slice(this.pos, this.pos = Math.min(this.pos + len, this.len));
 };
+
+/**
+ * Reads a sequence of bytes preceeded by its length as a varint.
+ * @name BufferReader#bytes
+ * @function
+ * @returns {Buffer} Value read
+ */
 
 },{"13":13,"8":8}],10:[function(require,module,exports){
 "use strict";
@@ -1212,7 +1226,7 @@ Service.prototype.rpcCall = function rpcCall(method, requestCtor, responseCtor, 
                         response = responseCtor[self.responseDelimited ? "decodeDelimited" : "decode"](response);
                     } catch (err) {
                         self.emit("error", err, method);
-                        return callback("error", err);
+                        return callback(err);
                     }
                 }
 
@@ -1456,27 +1470,39 @@ LongBits.prototype.length = function length() {
 "use strict";
 var util = exports;
 
-util.asPromise    = require(1);
-util.base64       = require(2);
-util.EventEmitter = require(3);
-util.inquire      = require(4);
-util.utf8         = require(6);
-util.pool         = require(5);
+// used to return a Promise where callback is omitted
+util.asPromise = require(1);
 
-util.LongBits     = require(12);
+// converts to / from base64 encoded strings
+util.base64 = require(2);
+
+// base class of rpc.Service
+util.EventEmitter = require(3);
+
+// requires modules optionally and hides the call from bundlers
+util.inquire = require(4);
+
+// convert to / from utf8 encoded strings
+util.utf8 = require(6);
+
+// provides a node-like buffer pool in the browser
+util.pool = require(5);
+
+// utility to work with the low and high bits of a 64 bit value
+util.LongBits = require(12);
 
 /**
  * An immuable empty array.
  * @memberof util
  * @type {Array.<*>}
  */
-util.emptyArray = Object.freeze ? Object.freeze([]) : /* istanbul ignore next */ [];
+util.emptyArray = Object.freeze ? Object.freeze([]) : /* istanbul ignore next */ []; // used on prototypes
 
 /**
  * An immutable empty object.
  * @type {Object}
  */
-util.emptyObject = Object.freeze ? Object.freeze({}) : /* istanbul ignore next */ {};
+util.emptyObject = Object.freeze ? Object.freeze({}) : /* istanbul ignore next */ {}; // used on prototypes
 
 /**
  * Whether running within node or not.
@@ -1520,21 +1546,8 @@ util.isObject = function isObject(value) {
 util.Buffer = (function() {
     try {
         var Buffer = util.inquire("buffer").Buffer;
-
-        /* istanbul ignore next */
-        if (!Buffer.prototype.utf8Write) // refuse to use non-node buffers (performance)
-            return null;
-
-        /* istanbul ignore next */
-        if (!Buffer.from)
-            Buffer.from = function from(value, encoding) { return new Buffer(value, encoding); };
-
-        /* istanbul ignore next */
-        if (!Buffer.allocUnsafe)
-            Buffer.allocUnsafe = function allocUnsafe(size) { return new Buffer(size); };
-
-        return Buffer;
-
+        // refuse to use non-node buffers if not explicitly assigned (perf reasons):
+        return Buffer.prototype.utf8Write ? Buffer : /* istanbul ignore next */ null;
     } catch (e) {
         /* istanbul ignore next */
         return null;
@@ -1542,18 +1555,37 @@ util.Buffer = (function() {
 })();
 
 /**
+ * Internal alias of or polyfull for Buffer.from.
+ * @type {?function}
+ * @param {string|number[]} value Value
+ * @param {string} [encoding] Encoding if value is a string
+ * @returns {Uint8Array}
+ * @private
+ */
+util._Buffer_from = null;
+
+/**
+ * Internal alias of or polyfill for Buffer.allocUnsafe.
+ * @type {?function}
+ * @param {number} size Buffer size
+ * @returns {Uint8Array}
+ * @private
+ */
+util._Buffer_allocUnsafe = null;
+
+/**
  * Creates a new buffer of whatever type supported by the environment.
  * @param {number|number[]} [sizeOrArray=0] Buffer size or number array
- * @returns {Uint8Array} Buffer
+ * @returns {Uint8Array|Buffer} Buffer
  */
 util.newBuffer = function newBuffer(sizeOrArray) {
     /* istanbul ignore next */
     return typeof sizeOrArray === "number"
         ? util.Buffer
-            ? util.Buffer.allocUnsafe(sizeOrArray) // polyfilled
+            ? util._Buffer_allocUnsafe(sizeOrArray)
             : new util.Array(sizeOrArray)
         : util.Buffer
-            ? util.Buffer.from(sizeOrArray) // polyfilled
+            ? util._Buffer_from(sizeOrArray)
             : typeof Uint8Array === "undefined"
                 ? sizeOrArray
                 : new Uint8Array(sizeOrArray);
@@ -1679,13 +1711,34 @@ util.lazyResolve = function lazyResolve(root, lazyTypes) {
 };
 
 /**
- * Default conversion options used for toJSON implementations.
+ * Default conversion options used for toJSON implementations. Converts longs, enums and bytes to strings.
  * @type {ConversionOptions}
  */
 util.toJSONOptions = {
     longs: String,
     enums: String,
     bytes: String
+};
+
+util._configure = function() {
+    var Buffer = util.Buffer;
+    /* istanbul ignore if */
+    if (!Buffer) {
+        util._Buffer_from = util._Buffer_allocUnsafe = null;
+        return;
+    }
+    // because node 4.x buffers are incompatible & immutable
+    // see: https://github.com/dcodeIO/protobuf.js/pull/665
+    util._Buffer_from = Buffer.from !== Uint8Array.from && Buffer.from ||
+        /* istanbul ignore next */
+        function Buffer_from(value, encoding) {
+            return new Buffer(value, encoding);
+        };
+    util._Buffer_allocUnsafe = Buffer.allocUnsafe ||
+        /* istanbul ignore next */
+        function Buffer_allocUnsafe(size) {
+            return new Buffer(size);
+        };
 };
 
 },{"1":1,"12":12,"2":2,"3":3,"4":4,"5":5,"6":6}],14:[function(require,module,exports){
@@ -2280,10 +2333,10 @@ function BufferWriter() {
 /**
  * Allocates a buffer of the specified size.
  * @param {number} size Buffer size
- * @returns {Uint8Array} Buffer
+ * @returns {Buffer} Buffer
  */
 BufferWriter.alloc = function alloc_buffer(size) {
-    return (BufferWriter.alloc = Buffer.allocUnsafe)(size);
+    return (BufferWriter.alloc = util._Buffer_allocUnsafe)(size);
 };
 
 var writeBytesBuffer = Buffer && Buffer.prototype instanceof Uint8Array && Buffer.prototype.set.name === "set"
@@ -2304,7 +2357,7 @@ var writeBytesBuffer = Buffer && Buffer.prototype instanceof Uint8Array && Buffe
  */
 BufferWriter.prototype.bytes = function write_bytes_buffer(value) {
     if (util.isString(value))
-        value = Buffer.from(value, "base64"); // polyfilled
+        value = util._Buffer_from(value, "base64");
     var len = value.length >>> 0;
     this.uint32(len);
     if (len)
@@ -2329,6 +2382,14 @@ BufferWriter.prototype.string = function write_string_buffer(value) {
         this.push(writeStringBuffer, len, value);
     return this;
 };
+
+
+/**
+ * Finishes the write operation.
+ * @name BufferWriter#finish
+ * @function
+ * @returns {Buffer} Finished buffer
+ */
 
 },{"13":13,"14":14}]},{},[7])
 

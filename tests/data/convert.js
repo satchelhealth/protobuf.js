@@ -4,9 +4,7 @@
 var $protobuf = require("../../minimal");
 
 // Common aliases
-var $Reader = $protobuf.Reader,
-    $Writer = $protobuf.Writer,
-    $util   = $protobuf.util;
+var $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
 
 // Lazily resolved type references
 var $lazyTypes = [];
@@ -292,7 +290,7 @@ $root.Message = (function() {
             var key = Object.keys(message.int64Map);
             for (var i = 0; i < key.length; ++i)
                 if (!$util.isInteger(message.int64Map[key[i]]) && !(message.int64Map[key[i]] && $util.isInteger(message.int64Map[key[i]].low) && $util.isInteger(message.int64Map[key[i]].high)))
-                    return "int64Map: integer|Long{key:string} expected";
+                    return "int64Map: integer|Long{k:string} expected";
         }
         return null;
     };
@@ -505,8 +503,7 @@ $root.Message = (function() {
      * @property {number} TWO=2 TWO value
      */
     Message.SomeEnum = (function() {
-        var valuesById = {},
-            values = Object.create(valuesById);
+        var valuesById = {}, values = Object.create(valuesById);
         values[valuesById[1] = "ONE"] = 1;
         values[valuesById[2] = "TWO"] = 2;
         return values;
