@@ -99,7 +99,8 @@ Service.prototype.rpcCall = function rpcCall(method, requestCtor, responseCtor, 
 
     var notVerified = requestCtor.verify(request);
     if (notVerified) {
-      return callback("InvalidRequest: " + notVerified);
+      setTimeout(function() { callback(Error("InvalidRequest: " + notVerified)); }, 0);
+      return undefined;
     }
 
     try {
