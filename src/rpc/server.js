@@ -48,50 +48,40 @@ Server.prototype.rpcCall = function rpcCall(meta, requestCtor, responseCtor, req
         request = requestCtor.decode(request);
         request = requestCtor.toObject(request, {longs: Number, bytes: Array, defaults: true});
 
-        var arity = impl.length;
-        switch (arity) {
-          case 2:
-            return impl(meta.ctx, request)
+        // enable Promise implementations of impl
+        if (impl.length == 2) {
+          impl = function(ctx, req, cb) {
+            impl.ctx(ctx, req)
               .then((response) => {
-                if (response === null) {
-                  return undefined;
-                }
-
-                try {
-                  response = responseCtor.encode(response).finish();
-                } catch (err) {
-                  self.emit("error", err, meta.method);
-                  return callback(err);
-                }
-
-                self.emit("data", response, meta.method);
-                return callback(null, response);
+                cb(null, response);
               })
-          case 3:
-            return impl(meta.ctx, request, function rpcCallback(err, response){
-
-              if (err) {
-                  self.emit("error", err, meta.method);
-                  return callback(err);
-              }
-
-              if (response === null) {
-                  return undefined;
-              }
-
-              try {
-                  response = responseCtor.encode(response).finish();
-              } catch (err) {
-                  self.emit("error", err, meta.method);
-                  return callback(err);
-              }
-
-              self.emit("data", response, meta.method);
-              return callback(null, response);
-            });
-          default:
-            return callback("Method " + meta.method +" implementation must have arity of 2 or 3. Provided implementation has " + arity + ".");
+              .catch((error) => {
+                cb(error);
+              })
+          }
         }
+
+        return impl(meta.ctx, request, function rpcCallback(err, response){
+
+          if (err) {
+              self.emit("error", err, meta.method);
+              return callback(err);
+          }
+
+          if (response === null) {
+              return undefined;
+          }
+
+          try {
+              response = responseCtor.encode(response).finish();
+          } catch (err) {
+              self.emit("error", err, meta.method);
+              return callback(err);
+          }
+
+          self.emit("data", response, meta.method);
+          return callback(null, response);
+        });
     } catch (err) {
         self.emit("error", err, meta.method);
         setTimeout(function() { callback(err); }, 0);
