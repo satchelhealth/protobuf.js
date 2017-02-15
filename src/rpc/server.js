@@ -49,12 +49,12 @@ Server.prototype.rpcCall = function rpcCall(meta, requestCtor, responseCtor, req
         request = requestCtor.toObject(request, {longs: Number, bytes: Array, defaults: true});
 
         function callbackify(func) {
-          let wrappedFunc;
+          var wrappedFunc;
           if (func.length === 2) {
             wrappedFunc = function(ctx, req, cb) {
               func(ctx, req)
-                .then((resp) => cb(null, resp))
-                .catch((err) => cb(err))
+                .then(function(resp) { cb(null, resp) })
+                .catch(function(err) { cb(err) });
             }
           }
           return wrappedFunc || func;
