@@ -48,7 +48,7 @@ Server.prototype.rpcCall = function rpcCall(meta, requestCtor, responseCtor, req
         request = requestCtor.decode(request);
         request = requestCtor.toObject(request, {longs: Number, bytes: Array, defaults: true});
 
-        var arity = function.length;
+        var arity = impl.length;
         switch (arity) {
           case 2:
             return impl(meta.ctx, request)
