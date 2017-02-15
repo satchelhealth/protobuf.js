@@ -47,32 +47,51 @@ Server.prototype.rpcCall = function rpcCall(meta, requestCtor, responseCtor, req
     try {
         request = requestCtor.decode(request);
         request = requestCtor.toObject(request, {longs: Number, bytes: Array, defaults: true});
-        impl(meta.ctx, request, function rpcCallback(err, response){
 
-          if (err) {
-              self.emit("error", err, meta.method);
-              return callback(err);
-          }
+        var arity = function.length;
+        switch (arity) {
+          case 2:
+            return impl(meta.ctx, request)
+              .then((response) => {
+                if (response === null) {
+                  return undefined;
+                }
 
-          if (response === null) {
-              return undefined;
-          }
+                try {
+                  response = responseCtor.encode(response).finish();
+                } catch (err) {
+                  self.emit("error", err, meta.method);
+                  return callback(err);
+                }
 
-          var notVerified = responseCtor.verify(response);
-          if (notVerified) {
-            return callback("InvalidResponse: " + notVerified);
-          }
+                self.emit("data", response, meta.method);
+                return callback(null, response);
+              })
+          case 3:
+            return impl(meta.ctx, request, function rpcCallback(err, response){
 
-          try {
-              response = responseCtor.encode(response).finish();
-          } catch (err) {
-              self.emit("error", err, meta.method);
-              return callback(err);
-          }
+              if (err) {
+                  self.emit("error", err, meta.method);
+                  return callback(err);
+              }
 
-          self.emit("data", response, meta.method);
-          return callback(null, response);
-        }, responseCtor.verify);
+              if (response === null) {
+                  return undefined;
+              }
+
+              try {
+                  response = responseCtor.encode(response).finish();
+              } catch (err) {
+                  self.emit("error", err, meta.method);
+                  return callback(err);
+              }
+
+              self.emit("data", response, meta.method);
+              return callback(null, response);
+            });
+          default:
+            return callback("Method " + meta.method +" implementation must have arity of 2 or 3. Provided implementation has " + arity + ".");
+        }
     } catch (err) {
         self.emit("error", err, meta.method);
         setTimeout(function() { callback(err); }, 0);
