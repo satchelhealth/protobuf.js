@@ -48,17 +48,21 @@ Server.prototype.rpcCall = function rpcCall(meta, requestCtor, responseCtor, req
         request = requestCtor.decode(request);
         request = requestCtor.toObject(request, {longs: Number, bytes: Array, defaults: true});
 
+        function callbackify(func) {
+          let wrappedFunc;
+          if (func.length === 2) {
+            wrappedFunc = function(ctx, req, cb) {
+              func(ctx, req)
+                .then((resp) => cb(null, resp))
+                .catch((err) => cb(err))
+            }
+          }
+          return wrappedFunc || func;
+        }
+
         // enable Promise implementations of impl
         if (impl.length == 2) {
-          impl = function(ctx, req, cb) {
-            impl(ctx, req)
-              .then((response) => {
-                cb(null, response);
-              })
-              .catch((error) => {
-                cb(error);
-              })
-          }
+          impl = callbackify(impl)
         }
 
         return impl(meta.ctx, request, function rpcCallback(err, response){
