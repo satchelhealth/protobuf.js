@@ -51,7 +51,7 @@ Server.prototype.rpcCall = function rpcCall(meta, requestCtor, responseCtor, req
         // enable Promise implementations of impl
         if (impl.length == 2) {
           impl = function(ctx, req, cb) {
-            impl.ctx(ctx, req)
+            impl(ctx, req)
               .then((response) => {
                 cb(null, response);
               })
