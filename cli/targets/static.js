@@ -592,7 +592,7 @@ function buildServer(ref, service) {
           push("");
       pushComment([
           method.comment || "Calls " + method.name + ".",
-          "@name " + name(service.name) + "#" + mName,
+          "@name " + name(service.name) + "Server#" + mName,
           "@function",
           "@param {Object} ctx Object containing request-scoped data",
           "@param {" + method.resolvedRequestType.fullName.substring(1) + "|Object} request " + method.resolvedRequestType.name + " message or plain object",
@@ -622,7 +622,7 @@ function buildClient(ref, service) {
     --indent;
     push("}");
     push("");
-    push("(" + name(service.name) + ".prototype = Object.create($protobuf.rpc.Service.prototype)).constructor = " + name(service.name) + "Client;");
+    push("(" + name(service.name) + "Client.prototype = Object.create($protobuf.rpc.Service.prototype)).constructor = " + name(service.name) + "Client;");
 
     if (config.create) {
         push("");
@@ -669,7 +669,7 @@ function buildClient(ref, service) {
             push("");
         pushComment([
             method.comment || "Calls " + method.name + ".",
-            "@name " + name(service.name) + "#" + lcName,
+            "@name " + name(service.name) + "Client#" + lcName,
             "@function",
             "@param {" + method.resolvedRequestType.fullName.substring(1) + "|Object} request " + method.resolvedRequestType.name + " message or plain object",
             "@returns {Promise<"+method.resolvedResponseType.fullName.substring(1)+">} Promise",
