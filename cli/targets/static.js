@@ -94,24 +94,21 @@ function aOrAn(name) {
 function buildNamespace(ref, ns, buildServiceAsServer) {
     if (!ns)
         return;
+
+    if(ns instanceof Service){
+      buildService(ref, ns, false);
+      buildService(ref, ns, true);
+      return
+    }
+
     if (ns.name !== "") {
         push("");
-        if(buildServiceAsServer){
-          push(name(ref) + "." + name(ns.name) + "Server = (function() {");
-        }else{
-          push(name(ref) + "." + name(ns.name) + "Client = (function() {");
-        }
+        push(name(ref) + "." + name(ns.name) + " = (function() {");
         ++indent;
     }
 
     if (ns instanceof Type) {
         buildType(undefined, ns);
-    } else if (ns instanceof Service){
-      if(buildServiceAsServer){
-        buildServer(undefined, ns);
-      }else{
-        buildClient(undefined, ns);
-      }
     } else if (ns.name !== "") {
         push("");
         pushComment([
@@ -130,19 +127,38 @@ function buildNamespace(ref, ns, buildServiceAsServer) {
     });
     if (ns.name !== "") {
         push("");
-        if(buildServiceAsServer){
-          push("return " + name(ns.name) + "Server;");
-        }else{
-          push("return " + name(ns.name) + "Client;");
-        }
+        push("return " + name(ns.name) + ";");
         --indent;
         push("})();");
     }
 
-    // If we've got a service, also build a server implementation
-    if(ns instanceof Service && !buildServiceAsServer){
-      buildNamespace(ref, ns, true);
+}
+
+function buildService(ref, ns, buildAsServer) {
+
+  var serviceType = buildAsServer ? "Server" : "Client";
+
+  push("");
+  push(name(ref) + "." + name(ns.name) + serviceType + " = (function() {");
+  ++indent;
+    if(buildAsServer){
+      buildServer(undefined, ns);
+    }else{
+      buildClient(undefined, ns);
     }
+
+    ns.nestedArray.forEach(function(nested) {
+        if (nested instanceof Enum){
+          buildEnum(ns.name, nested);
+        }else if (nested instanceof Namespace){
+          buildNamespace(ns.name, nested);
+        }
+    });
+
+    push("");
+    push("return " + name(ns.name) + serviceType + ";");
+  --indent;
+  push("})();");
 }
 
 var reduceableBlockStatements = {
