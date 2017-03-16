@@ -135,12 +135,12 @@ function buildNamespace(ref, ns, buildServiceAsServer) {
 }
 
 function buildService(ref, ns, buildAsServer) {
+    var serviceType = buildAsServer ? "Server" : "Client";
 
-  var serviceType = buildAsServer ? "Server" : "Client";
+    push("");
+    push(name(ref) + "." + name(ns.name) + serviceType + " = (function() {");
+    ++indent;
 
-  push("");
-  push(name(ref) + "." + name(ns.name) + serviceType + " = (function() {");
-  ++indent;
     if(buildAsServer){
       buildServer(undefined, ns);
     }else{
@@ -157,8 +157,8 @@ function buildService(ref, ns, buildAsServer) {
 
     push("");
     push("return " + name(ns.name) + serviceType + ";");
-  --indent;
-  push("})();");
+    --indent;
+    push("})();");
 }
 
 var reduceableBlockStatements = {
