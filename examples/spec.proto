@@ -1,0 +1,20 @@
+package satchel;
+syntax = "proto3";
+
+message UsersRequest{
+  string Group = 1;
+  int64 Max = 2;
+}
+
+message User{
+  string Id = 1;
+  string Name = 2;
+}
+
+message UsersResponse {
+  repeated User users = 1;
+}
+
+service Users{
+  rpc GetUsers (UsersRequest) returns (UsersResponse);
+}

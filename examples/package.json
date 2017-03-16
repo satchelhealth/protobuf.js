@@ -1,0 +1,14 @@
+{
+  "name": "examples",
+  "version": "1.0.0",
+  "description": "",
+  "main": "client-server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "protobufjs": "git+ssh://git@github.com/satchelhealth/protobuf.js.git#server"
+  },
+  "author": "",
+  "license": "ISC"
+}

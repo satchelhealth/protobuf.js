@@ -94,24 +94,21 @@ function aOrAn(name) {
 function buildNamespace(ref, ns, buildServiceAsServer) {
     if (!ns)
         return;
+
+    if(ns instanceof Service){
+      buildService(ref, ns, false);
+      buildService(ref, ns, true);
+      return
+    }
+
     if (ns.name !== "") {
         push("");
-        if(buildServiceAsServer){
-          push(name(ref) + "." + name(ns.name) + "Server = (function() {");
-        }else{
-          push(name(ref) + "." + name(ns.name) + " = (function() {");
-        }
+        push(name(ref) + "." + name(ns.name) + " = (function() {");
         ++indent;
     }
 
     if (ns instanceof Type) {
         buildType(undefined, ns);
-    } else if (ns instanceof Service){
-      if(buildServiceAsServer){
-        buildServer(undefined, ns);
-      }else{
-        buildService(undefined, ns);
-      }
     } else if (ns.name !== "") {
         push("");
         pushComment([
@@ -130,19 +127,38 @@ function buildNamespace(ref, ns, buildServiceAsServer) {
     });
     if (ns.name !== "") {
         push("");
-        if(buildServiceAsServer){
-          push("return " + name(ns.name) + "Server;");
-        }else{
-          push("return " + name(ns.name) + ";");
-        }
+        push("return " + name(ns.name) + ";");
         --indent;
         push("})();");
     }
 
-    // If we've got a service, also build a server implementation
-    if(ns instanceof Service && !buildServiceAsServer){
-      buildNamespace(ref, ns, true);
-    }
+}
+
+function buildService(ref, ns, buildAsServer) {
+    var serviceType = buildAsServer ? "Server" : "Client";
+
+    push("");
+    push(name(ref) + "." + name(ns.name) + serviceType + " = (function() {");
+    ++indent;
+
+        if(buildAsServer){
+          buildServer(undefined, ns);
+        }else{
+          buildClient(undefined, ns);
+        }
+
+        ns.nestedArray.forEach(function(nested) {
+            if (nested instanceof Enum){
+              buildEnum(ns.name, nested);
+            }else if (nested instanceof Namespace){
+              buildNamespace(ns.name, nested);
+            }
+        });
+
+        push("");
+        push("return " + name(ns.name) + serviceType + ";");
+    --indent;
+    push("})();");
 }
 
 var reduceableBlockStatements = {
@@ -592,7 +608,7 @@ function buildServer(ref, service) {
           push("");
       pushComment([
           method.comment || "Calls " + method.name + ".",
-          "@name " + name(service.name) + "#" + mName,
+          "@name " + name(service.name) + "Server#" + mName,
           "@function",
           "@param {Object} ctx Object containing request-scoped data",
           "@param {" + method.resolvedRequestType.fullName.substring(1) + "|Object} request " + method.resolvedRequestType.name + " message or plain object",
@@ -602,12 +618,12 @@ function buildServer(ref, service) {
   });
 }
 
-function buildService(ref, service) {
-    var fullName = service.fullName.substring(1);
+function buildClient(ref, service) {
+    var fullName = service.fullName.substring(1) + "Client";
 
     push("");
     pushComment([
-        "Constructs a new " + service.name + " service.",
+        "Constructs a new " + service.name + " client.",
         service.comment ? "@classdesc " + service.comment : null,
         "@exports " + fullName,
         "@extends $protobuf.rpc.Service",
@@ -616,24 +632,24 @@ function buildService(ref, service) {
         "@param {boolean} [requestDelimited=false] Whether requests are length-delimited",
         "@param {boolean} [responseDelimited=false] Whether responses are length-delimited"
     ]);
-    push("function " + name(service.name) + "(rpcImpl, requestDelimited, responseDelimited) {");
+    push("function " + name(service.name) + "Client(rpcImpl, requestDelimited, responseDelimited) {");
     ++indent;
     push("$protobuf.rpc.Service.call(this, rpcImpl, requestDelimited, responseDelimited);");
     --indent;
     push("}");
     push("");
-    push("(" + name(service.name) + ".prototype = Object.create($protobuf.rpc.Service.prototype)).constructor = " + name(service.name) + ";");
+    push("(" + name(service.name) + "Client.prototype = Object.create($protobuf.rpc.Service.prototype)).constructor = " + name(service.name) + "Client;");
 
     if (config.create) {
         push("");
         pushComment([
-            "Creates new " + service.name + " service using the specified rpc implementation.",
+            "Creates new " + service.name + "Client client using the specified rpc implementation.",
             "@param {$protobuf.RPCImpl} rpcImpl RPC implementation",
             "@param {boolean} [requestDelimited=false] Whether requests are length-delimited",
             "@param {boolean} [responseDelimited=false] Whether responses are length-delimited",
-            "@returns {" + name(service.name) + "} RPC service. Useful where requests and/or responses are streamed."
+            "@returns {" + name(service.name) + "Client} RPC client. Useful where requests and/or responses are streamed."
         ]);
-        push(name(service.name) + ".create = function create(rpcImpl, requestDelimited, responseDelimited) {");
+        push(name(service.name) + "Client.create = function create(rpcImpl, requestDelimited, responseDelimited) {");
             ++indent;
             push("return new this(rpcImpl, requestDelimited, responseDelimited);");
             --indent;
@@ -644,9 +660,9 @@ function buildService(ref, service) {
         method.resolve();
         var lcName = method.name.substring(0, 1).toLowerCase() + method.name.substring(1);
         push("");
-        var cbName = name(service.name) + "_" + name(lcName) + "_Callback";
+        var cbName = name(service.name) + "Client_" + name(lcName) + "_Callback";
         pushComment([
-            "Callback as used by {@link " + name(service.name) + "#" + name(lcName) + "}.",
+            "Callback as used by {@link " + name(service.name) + "Client#" + name(lcName) + "}.",
             // This is a more specialized version of protobuf.rpc.ServiceCallback
             "@typedef " + cbName,
             "@type {function}",
@@ -660,7 +676,7 @@ function buildService(ref, service) {
             "@param {" + cbName + "} callback Node-style callback called with the error, if any, and " + method.resolvedResponseType.name,
             "@returns {undefined}"
         ]);
-        push(name(service.name) + ".prototype" + util.safeProp(lcName) + " = function " + name(lcName) + "(request, callback) {");
+        push(name(service.name) + "Client.prototype" + util.safeProp(lcName) + " = function " + name(lcName) + "(request, callback) {");
             ++indent;
             push("return this.rpcCall(\"" + name(method.name) + "\", $root" + method.resolvedRequestType.fullName + ", $root" + method.resolvedResponseType.fullName + ", request, callback);");
             --indent;
@@ -669,7 +685,7 @@ function buildService(ref, service) {
             push("");
         pushComment([
             method.comment || "Calls " + method.name + ".",
-            "@name " + name(service.name) + "#" + lcName,
+            "@name " + name(service.name) + "Client#" + lcName,
             "@function",
             "@param {" + method.resolvedRequestType.fullName.substring(1) + "|Object} request " + method.resolvedRequestType.name + " message or plain object",
             "@returns {Promise<"+method.resolvedResponseType.fullName.substring(1)+">} Promise",
