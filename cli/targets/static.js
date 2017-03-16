@@ -141,22 +141,22 @@ function buildService(ref, ns, buildAsServer) {
     push(name(ref) + "." + name(ns.name) + serviceType + " = (function() {");
     ++indent;
 
-    if(buildAsServer){
-      buildServer(undefined, ns);
-    }else{
-      buildClient(undefined, ns);
-    }
-
-    ns.nestedArray.forEach(function(nested) {
-        if (nested instanceof Enum){
-          buildEnum(ns.name, nested);
-        }else if (nested instanceof Namespace){
-          buildNamespace(ns.name, nested);
+        if(buildAsServer){
+          buildServer(undefined, ns);
+        }else{
+          buildClient(undefined, ns);
         }
-    });
 
-    push("");
-    push("return " + name(ns.name) + serviceType + ";");
+        ns.nestedArray.forEach(function(nested) {
+            if (nested instanceof Enum){
+              buildEnum(ns.name, nested);
+            }else if (nested instanceof Namespace){
+              buildNamespace(ns.name, nested);
+            }
+        });
+
+        push("");
+        push("return " + name(ns.name) + serviceType + ";");
     --indent;
     push("})();");
 }
