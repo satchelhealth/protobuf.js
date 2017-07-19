@@ -41,7 +41,12 @@ Server.prototype.rpcCall = function rpcCall(meta, requestCtor, responseCtor, req
         return util.asPromise(rpcCall, self, meta, requestCtor, responseCtor, request);
 
     if(!impl || typeof impl !== "function"){
-      return callback("Method " + meta.method + " not implemented");
+      var defImpl = self.rpcServerImpl["_default"];
+      if(defImpl && typeof defImpl === "function"){
+        impl = defImpl;
+      }else{
+        return callback("Method " + meta.method + " not implemented");
+      }
     }
 
     try {
