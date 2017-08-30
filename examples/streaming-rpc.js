@@ -1,5 +1,6 @@
-/*eslint-disable strict, no-console*/
+// this example demonstrates how to consume a streaming rpc service.
 
+/*eslint-disable strict, no-console*/
 var protobuf = require("..");
 
 // Load a definition with services:
@@ -9,9 +10,9 @@ var root = protobuf.Root.fromJSON({
         Greeter: {
             methods: {
                 "SayHello": {
-                    requestType: 'Hello',
+                    requestType: "Hello",
                     requestStream: true,
-                    responseType: 'World',
+                    responseType: "World",
                     responseStream: true
                 }
             }
@@ -52,19 +53,27 @@ var greeter = Greeter.create(/* rpcImpl */ (function() { // API documentation: S
             ended = true;
             return;
         }
-        setTimeout(function() {
-            try {
-                // begin exemplary server side code
-                var hello = Hello.decodeDelimited(requestData);
-                var responseData = World.encodeDelimited({ message: "Hello " + hello.name }).finish();
-                // end exemplary server side code
-                return callback(null, responseData);
-            } catch (err) {
-                return callback(err);
-            }
-        }, Math.random() * 500);
+        // in a real-world scenario, the client would now send requestData to a server using some
+        // sort of transport layer (i.e. http), wait for responseData and call the callback.
+        performRequestOverTransportChannel(requestData, function(responseData) {
+            callback(null, responseData);
+        });
     };
 })(), /* requestDelimited? */ true, /* responseDelimited? */ true);
+
+// examplary server-side code for the sake of this example
+function performRequestOverTransportChannel(requestData, callback) {
+    setTimeout(/* simulated delay */function() {
+        // 1. server decodes the request
+        var request = Hello.decodeDelimited(requestData);
+        // 2. server handles the request and creates a response
+        var response = { message: "Hello " + request.name };
+        setTimeout(/* simulated delay */function() {
+            // 3. server encodes and sends the response
+            callback(World.encodeDelimited(response).finish());
+        }, Math.random() * 250);
+    }, Math.random() * 250);
+}
 
 // Listen for events:
 
@@ -99,6 +108,7 @@ setTimeout(function() {
     greeter.end();
     // ^ Signals rpcImpl that the service has been ended client-side by calling it with a null buffer.
     //   Likewise, rpcImpl can also end the stream by calling its callback with an explicit null buffer.
-
-    greeter.sayHello({ name: "three" }); // does nothing
+    greeter.sayHello({ name: "three" }, function(err) {
+        console.error("this should fail: " + err.message);
+    });
 }, 501);

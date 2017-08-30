@@ -2,7 +2,7 @@
 var child_process = require("child_process"),
     path     = require("path"),
     fs       = require("fs"),
-    pkg      = require(path.join(__dirname, "..", "package.json")),
+    pkg      = require("./package.json"),
     util     = require("./util");
 
 util.setup();
@@ -15,7 +15,7 @@ var minimist = require("minimist"),
 /**
  * Runs pbts programmatically.
  * @param {string[]} args Command line arguments
- * @param {function(?Error)} [callback] Optional completion callback
+ * @param {function(?Error, string=)} [callback] Optional completion callback
  * @returns {number|undefined} Exit code, if known
  */
 exports.main = function(args, callback) {
@@ -38,9 +38,9 @@ exports.main = function(args, callback) {
 
     if (!files.length) {
         if (callback)
-            callback(Error("usage"));
+            callback(Error("usage")); // eslint-disable-line callback-return
         else
-            console.error([
+            process.stderr.write([
                 "protobuf.js v" + pkg.version + " CLI for TypeScript",
                 "",
                 chalk.bold.white("Generates TypeScript definitions from annotated JavaScript files."),
@@ -57,10 +57,9 @@ exports.main = function(args, callback) {
                 "",
                 "  -m, --main      Whether building the main library without any imports.",
                 "",
-                "usage: " + chalk.bold.green("pbts") + " [options] file1.js file2.js ..." + chalk.bold.gray("  (or)  ") + "other | " + chalk.bold.green("pbts") + " [options] -"
+                "usage: " + chalk.bold.green("pbts") + " [options] file1.js file2.js ..." + chalk.bold.gray("  (or)  ") + "other | " + chalk.bold.green("pbts") + " [options] -",
+                ""
             ].join("\n"));
-        if (callback)
-            callback(Error("usage"));
         return 1;
     }
 
@@ -97,9 +96,9 @@ exports.main = function(args, callback) {
     function callJsdoc() {
 
         // There is no proper API for jsdoc, so this executes the CLI and pipes the output
-        var basedir = path.join(__dirname, "..");
+        var basedir = path.join(__dirname, ".");
         var moduleName = argv.name || "null";
-        var cmd = "node \"" + require.resolve("jsdoc/jsdoc.js") + "\" -c \"" + path.join(basedir, "jsdoc.types.json") + "\" -q \"module=" + encodeURIComponent(moduleName) + "&comments=" + Boolean(argv.comments) + "\" " + files.map(function(file) { return "\"" + file + "\""; }).join(" ");
+        var cmd = "node \"" + require.resolve("jsdoc/jsdoc.js") + "\" -c \"" + path.join(basedir, "lib", "tsd-jsdoc.json") + "\" -q \"module=" + encodeURIComponent(moduleName) + "&comments=" + Boolean(argv.comments) + "\" " + files.map(function(file) { return "\"" + file + "\""; }).join(" ");
         var child = child_process.exec(cmd, {
             cwd: process.cwd(),
             argv0: "node",
@@ -107,25 +106,34 @@ exports.main = function(args, callback) {
             maxBuffer: 1 << 24 // 16mb
         });
         var out = [];
+        var ended = false;
+        var closed = false;
         child.stdout.on("data", function(data) {
             out.push(data);
+        });
+        child.stdout.on("end", function() {
+            if (closed) finish();
+            else ended = true;
         });
         child.stderr.pipe(process.stderr);
         child.on("close", function(code) {
             // clean up temporary files, no matter what
-            try { cleanup.forEach(fs.unlinkSync); } catch(e) {} cleanup = [];
+            try { cleanup.forEach(fs.unlinkSync); } catch(e) {/**/} cleanup = [];
 
             if (code) {
-                out = out.join('').replace(/\s*JSDoc \d+\.\d+\.\d+ [^$]+/, "");
+                out = out.join("").replace(/\s*JSDoc \d+\.\d+\.\d+ [^$]+/, "");
                 process.stderr.write(out);
                 var err = Error("code " + code);
                 if (callback)
-                    callback(err);
-                else
-                    throw err;
-                return;
+                    return callback(err);
+                throw err;
             }
 
+            if (ended) finish();
+            else closed = true;
+        });
+
+        function finish() {
             var output = [];
             if (argv.global)
                 output.push(
@@ -137,22 +145,22 @@ exports.main = function(args, callback) {
                     "import * as $protobuf from \"protobufjs\";",
                     ""
                 );
-            output = output.join('\n') + "\n" + out.join('');
+            output = output.join("\n") + "\n" + out.join("");
 
             try {
                 if (argv.out)
-                    fs.writeFileSync(argv.out, output);
-                else
+                    fs.writeFileSync(argv.out, output, { encoding: "utf8" });
+                else if (!callback)
                     process.stdout.write(output, "utf8");
-                if (callback)
-                    callback(null);
+                return callback
+                    ? callback(null, output)
+                    : undefined;
             } catch (err) {
                 if (callback)
-                    callback(err);
-                else
-                    throw err;
+                    return callback(err);
+                throw err;
             }
-        });
+        }
     }
 
     return undefined;

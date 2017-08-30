@@ -7,6 +7,14 @@ var Writer = protobuf.Writer,
 
 tape.test("writer & reader", function(test) {
 
+    test.throws(function() {
+        Reader.create(1);
+    }, "should throw when creating a Reader from something else than a buffer");
+
+    test.doesNotThrow(function() {
+        Reader.create([]);
+    }, "should not throw when creating a Reader from an array (comp)");
+
     // uint32, int32, sint32
 
     var values = [
@@ -43,12 +51,17 @@ tape.test("writer & reader", function(test) {
             test.same(Array.prototype.slice.call(buffer), Array.prototype.slice.call(comp), "should write " + val[0] + " as fixed 32 bits");
             test.equal(Reader.create(buffer).fixed32(), val[0], "should read back "+ val[0] + " equally");
 
-            var zzBaseVal = val[0] >>> 1 ^ -(val[0] & 1) | 0;
-            buffer = Writer.create().sfixed32(zzBaseVal).finish();
+            var signedVal = val[0] | 0;
+            buffer = Writer.create().sfixed32(signedVal).finish();
             comp = new Uint8Array(new Uint32Array([ val[0] ]).buffer);
-            test.same(Array.prototype.slice.call(buffer), Array.prototype.slice.call(comp), "should write " + zzBaseVal + " as zig-zag encoded fixed 32 bits");
-            test.equal(Reader.create(buffer).sfixed32(), zzBaseVal, "should read back "+ zzBaseVal + " equally");
+            test.same(Array.prototype.slice.call(buffer), Array.prototype.slice.call(comp), "should write " + signedVal + " as fixed 32 bits (signed)");
+            test.equal(Reader.create(buffer).sfixed32(), signedVal, "should read back "+ signedVal + " equally");
         });
+
+    test.ok(expect("fixed32", 4294967295, [ 255, 255, 255, 255 ]), "should write 4294967295 as fixed 32 bits");
+    test.ok(expect("fixed32", 4294967294, [ 254, 255, 255, 255 ]), "should write 4294967294 as fixed 32 bits");
+    test.ok(expect("sfixed32", -1, [ 255, 255, 255, 255 ]), "should write -1 as fixed 32 bits (signed)");
+    test.ok(expect("sfixed32", -2, [ 254, 255, 255, 255 ]), "should write -2 as fixed 32 bits (signed)");
 
     // uint64, int64, sint64
 

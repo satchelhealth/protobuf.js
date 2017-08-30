@@ -16,32 +16,20 @@ var tokenize  = require("./tokenize"),
     types     = require("./types"),
     util      = require("./util");
 
-function isName(token) {
-    return /^[a-zA-Z_][a-zA-Z_0-9]*$/.test(token);
-}
-
-function isTypeRef(token) {
-    return /^(?:\.?[a-zA-Z_][a-zA-Z_0-9]*)+$/.test(token);
-}
-
-function isFqTypeRef(token) {
-    return /^(?:\.[a-zA-Z][a-zA-Z_0-9]*)+$/.test(token);
-}
-
-function lower(token) {
-    return token === null ? null : token.toLowerCase();
-}
-
-function camelCase(str) {
-    return str.substring(0,1)
-         + str.substring(1)
-               .replace(/_([a-z])(?=[a-z]|$)/g, function($0, $1) { return $1.toUpperCase(); });
-}
+var base10Re    = /^[1-9][0-9]*$/,
+    base10NegRe = /^-?[1-9][0-9]*$/,
+    base16Re    = /^0[x][0-9a-fA-F]+$/,
+    base16NegRe = /^-?0[x][0-9a-fA-F]+$/,
+    base8Re     = /^0[0-7]+$/,
+    base8NegRe  = /^-?0[0-7]+$/,
+    numberRe    = /^(?![eE])[0-9]*(?:\.[0-9]*)?(?:[eE][+-]?[0-9]+)?$/,
+    nameRe      = /^[a-zA-Z_][a-zA-Z_0-9]*$/,
+    typeRefRe   = /^(?:\.?[a-zA-Z_][a-zA-Z_0-9]*)+$/,
+    fqTypeRefRe = /^(?:\.[a-zA-Z][a-zA-Z_0-9]*)+$/;
 
 /**
  * Result object returned from {@link parse}.
- * @typedef ParserResult
- * @type {Object.<string,*>}
+ * @interface IParserResult
  * @property {string|undefined} package Package name, if declared
  * @property {string[]|undefined} imports Imports, if any
  * @property {string[]|undefined} weakImports Weak imports, if any
@@ -51,20 +39,18 @@ function camelCase(str) {
 
 /**
  * Options modifying the behavior of {@link parse}.
- * @typedef ParseOptions
- * @type {Object.<string,*>}
+ * @interface IParseOptions
  * @property {boolean} [keepCase=false] Keeps field casing instead of converting to camel case
  */
 
 /**
  * Parses the given .proto source and returns an object with the parsed contents.
- * @function
  * @param {string} source Source contents
  * @param {Root} root Root to populate
- * @param {ParseOptions} [options] Parse options. Defaults to {@link parse.defaults} when omitted.
- * @returns {ParserResult} Parser result
+ * @param {IParseOptions} [options] Parse options. Defaults to {@link parse.defaults} when omitted.
+ * @returns {IParserResult} Parser result
  * @property {string} filename=null Currently processing file name for error reporting, if known
- * @property {ParseOptions} defaults Default {@link ParseOptions}
+ * @property {IParseOptions} defaults Default {@link IParseOptions}
  */
 function parse(source, root, options) {
     /* eslint-disable callback-return */
@@ -91,23 +77,24 @@ function parse(source, root, options) {
 
     var ptr = root;
 
-    var applyCase = options.keepCase ? function(name) { return name; } : camelCase;
+    var applyCase = options.keepCase ? function(name) { return name; } : util.camelCase;
 
     /* istanbul ignore next */
     function illegal(token, name, insideTryCatch) {
         var filename = parse.filename;
         if (!insideTryCatch)
             parse.filename = null;
-        return Error("illegal " + (name || "token") + " '" + token + "' (" + (filename ? filename + ", " : "") + "line " + tn.line() + ")");
+        return Error("illegal " + (name || "token") + " '" + token + "' (" + (filename ? filename + ", " : "") + "line " + tn.line + ")");
     }
 
     function readString() {
         var values = [],
             token;
-        /* istanbul ignore next */
         do {
+            /* istanbul ignore if */
             if ((token = next()) !== "\"" && token !== "'")
                 throw illegal(token);
+
             values.push(next());
             skip(token);
             token = peek();
@@ -117,34 +104,38 @@ function parse(source, root, options) {
 
     function readValue(acceptTypeRef) {
         var token = next();
-        switch (lower(token)) {
+        switch (token) {
             case "'":
             case "\"":
                 push(token);
                 return readString();
-            case "true":
+            case "true": case "TRUE":
                 return true;
-            case "false":
+            case "false": case "FALSE":
                 return false;
         }
         try {
             return parseNumber(token, /* insideTryCatch */ true);
         } catch (e) {
+
             /* istanbul ignore else */
-            if (acceptTypeRef && isTypeRef(token))
+            if (acceptTypeRef && typeRefRe.test(token))
                 return token;
+
             /* istanbul ignore next */
             throw illegal(token, "value");
         }
     }
 
-    function readRange() {
-        var start = parseId(next());
-        var end = start;
-        if (skip("to", true))
-            end = parseId(next());
+    function readRanges(target, acceptStrings) {
+        var token, start;
+        do {
+            if (acceptStrings && ((token = peek()) === "\"" || token === "'"))
+                target.push(readString());
+            else
+                target.push([ start = parseId(next()), skip("to", true) ? parseId(next()) : start ]);
+        } while (skip(",", true));
         skip(";");
-        return [ start, end ];
     }
 
     function parseNumber(token, insideTryCatch) {
@@ -153,52 +144,66 @@ function parse(source, root, options) {
             sign = -1;
             token = token.substring(1);
         }
-        var tokenLower = lower(token);
-        switch (tokenLower) {
-            case "inf": return sign * Infinity;
-            case "nan": return NaN;
-            case "0": return 0;
+        switch (token) {
+            case "inf": case "INF": case "Inf":
+                return sign * Infinity;
+            case "nan": case "NAN": case "Nan": case "NaN":
+                return NaN;
+            case "0":
+                return 0;
         }
-        if (/^[1-9][0-9]*$/.test(token))
+        if (base10Re.test(token))
             return sign * parseInt(token, 10);
-        if (/^0[x][0-9a-f]+$/.test(tokenLower))
+        if (base16Re.test(token))
             return sign * parseInt(token, 16);
-        if (/^0[0-7]+$/.test(token))
+        if (base8Re.test(token))
             return sign * parseInt(token, 8);
-        if (/^(?!e)[0-9]*(?:\.[0-9]*)?(?:[e][+-]?[0-9]+)?$/.test(tokenLower))
+
+        /* istanbul ignore else */
+        if (numberRe.test(token))
             return sign * parseFloat(token);
+
         /* istanbul ignore next */
         throw illegal(token, "number", insideTryCatch);
     }
 
     function parseId(token, acceptNegative) {
-        var tokenLower = lower(token);
-        switch (tokenLower) {
-            case "max": return 536870911;
-            case "0": return 0;
+        switch (token) {
+            case "max": case "MAX": case "Max":
+                return 536870911;
+            case "0":
+                return 0;
         }
-        /* istanbul ignore next */
-        if (token.charAt(0) === "-" && !acceptNegative)
+
+        /* istanbul ignore if */
+        if (!acceptNegative && token.charAt(0) === "-")
             throw illegal(token, "id");
-        if (/^-?[1-9][0-9]*$/.test(token))
+
+        if (base10NegRe.test(token))
             return parseInt(token, 10);
-        if (/^-?0[x][0-9a-f]+$/.test(tokenLower))
+        if (base16NegRe.test(token))
             return parseInt(token, 16);
+
         /* istanbul ignore else */
-        if (/^-?0[0-7]+$/.test(token))
+        if (base8NegRe.test(token))
             return parseInt(token, 8);
+
         /* istanbul ignore next */
         throw illegal(token, "id");
     }
 
     function parsePackage() {
-        /* istanbul ignore next */
+
+        /* istanbul ignore if */
         if (pkg !== undefined)
             throw illegal("package");
+
         pkg = next();
-        /* istanbul ignore next */
-        if (!isTypeRef(pkg))
+
+        /* istanbul ignore if */
+        if (!typeRefRe.test(pkg))
             throw illegal(pkg, "name");
+
         ptr = ptr.define(pkg);
         skip(";");
     }
@@ -225,11 +230,13 @@ function parse(source, root, options) {
 
     function parseSyntax() {
         skip("=");
-        syntax = lower(readString());
+        syntax = readString();
         isProto3 = syntax === "proto3";
-        /* istanbul ignore next */
+
+        /* istanbul ignore if */
         if (!isProto3 && syntax !== "proto2")
             throw illegal(syntax, "syntax");
+
         skip(";");
     }
 
@@ -260,55 +267,71 @@ function parse(source, root, options) {
         return false;
     }
 
-    function parseType(parent, token) {
-        var name = next();
-        /* istanbul ignore next */
-        if (!isName(name))
-            throw illegal(name, "type name");
-        var type = new Type(name);
-        type.comment = cmnt();
-        type.filename = parse.filename;
+    function ifBlock(obj, fnIf, fnElse) {
+        var trailingLine = tn.line;
+        if (obj) {
+            obj.comment = cmnt(); // try block-type comment
+            obj.filename = parse.filename;
+        }
         if (skip("{", true)) {
-            while ((token = next()) !== "}") {
-                var tokenLower = lower(token);
-                if (parseCommon(type, token))
-                    continue;
-                switch (tokenLower) {
-
-                    case "map":
-                        parseMapField(type, tokenLower);
-                        break;
-
-                    case "required":
-                    case "optional":
-                    case "repeated":
-                        parseField(type, tokenLower);
-                        break;
-
-                    case "oneof":
-                        parseOneOf(type, tokenLower);
-                        break;
-
-                    case "extensions":
-                        (type.extensions || (type.extensions = [])).push(readRange(type, tokenLower));
-                        break;
-
-                    case "reserved":
-                        (type.reserved || (type.reserved = [])).push(readRange(type, tokenLower));
-                        break;
-
-                    default:
-                        /* istanbul ignore next */
-                        if (!isProto3 || !isTypeRef(token))
-                            throw illegal(token);
-                        push(token);
-                        parseField(type, "optional");
-                        break;
-                }
-            }
+            var token;
+            while ((token = next()) !== "}")
+                fnIf(token);
             skip(";", true);
-        } else
+        } else {
+            if (fnElse)
+                fnElse();
             skip(";");
+            if (obj && typeof obj.comment !== "string")
+                obj.comment = cmnt(trailingLine); // try line-type comment if no block
+        }
+    }
+
+    function parseType(parent, token) {
+
+        /* istanbul ignore if */
+        if (!nameRe.test(token = next()))
+            throw illegal(token, "type name");
+
+        var type = new Type(token);
+        ifBlock(type, function parseType_block(token) {
+            if (parseCommon(type, token))
+                return;
+
+            switch (token) {
+
+                case "map":
+                    parseMapField(type, token);
+                    break;
+
+                case "required":
+                case "optional":
+                case "repeated":
+                    parseField(type, token);
+                    break;
+
+                case "oneof":
+                    parseOneOf(type, token);
+                    break;
+
+                case "extensions":
+                    readRanges(type.extensions || (type.extensions = []));
+                    break;
+
+                case "reserved":
+                    readRanges(type.reserved || (type.reserved = []), true);
+                    break;
+
+                default:
+                    /* istanbul ignore if */
+                    if (!isProto3 || !typeRefRe.test(token))
+                        throw illegal(token);
+
+                    push(token);
+                    parseField(type, "optional");
+                    break;
+            }
+        });
         parent.add(type);
     }
 
@@ -318,34 +341,49 @@ function parse(source, root, options) {
             parseGroup(parent, rule);
             return;
         }
-        /* istanbul ignore next */
-        if (!isTypeRef(type))
+
+        /* istanbul ignore if */
+        if (!typeRefRe.test(type))
             throw illegal(type, "type");
+
         var name = next();
-        /* istanbul ignore next */
-        if (!isName(name))
+
+        /* istanbul ignore if */
+        if (!nameRe.test(name))
             throw illegal(name, "name");
+
         name = applyCase(name);
         skip("=");
-        var field = new Field(name, parseId(next()), type, rule, extend),
-            trailingLine = tn.line();
-        field.comment = cmnt();
-        field.filename = parse.filename;
-        parseInlineOptions(field);
-        if (!field.comment)
-            field.comment = cmnt(trailingLine);
-        // JSON defaults to packed=true if not set so we have to set packed=false explicity when
-        // parsing proto2 descriptors without the option, where applicable.
-        if (field.repeated && types.packed[type] !== undefined && !isProto3)
-            field.setOption("packed", false, /* ifNotSet */ true);
+
+        var field = new Field(name, parseId(next()), type, rule, extend);
+        ifBlock(field, function parseField_block(token) {
+
+            /* istanbul ignore else */
+            if (token === "option") {
+                parseOption(field, token);
+                skip(";");
+            } else
+                throw illegal(token);
+
+        }, function parseField_line() {
+            parseInlineOptions(field);
+        });
         parent.add(field);
+
+        // JSON defaults to packed=true if not set so we have to set packed=false explicity when
+        // parsing proto2 descriptors without the option, where applicable. This must be done for
+        // all known packable types and anything that could be an enum (= is not a basic type).
+        if (!isProto3 && field.repeated && (types.packed[type] !== undefined || types.basic[type] === undefined))
+            field.setOption("packed", false, /* ifNotSet */ true);
     }
 
     function parseGroup(parent, rule) {
         var name = next();
-        /* istanbul ignore next */
-        if (!isName(name))
+
+        /* istanbul ignore if */
+        if (!nameRe.test(name))
             throw illegal(name, "name");
+
         var fieldName = util.lcFirst(name);
         if (name === fieldName)
             name = util.ucFirst(name);
@@ -353,16 +391,16 @@ function parse(source, root, options) {
         var id = parseId(next());
         var type = new Type(name);
         type.group = true;
-        type.comment = cmnt();
         var field = new Field(fieldName, id, name, rule);
-        type.filename = field.filename = parse.filename;
-        skip("{");
-        while ((token = next()) !== "}") {
-            switch (token = lower(token)) {
+        field.filename = parse.filename;
+        ifBlock(type, function parseGroup_block(token) {
+            switch (token) {
+
                 case "option":
                     parseOption(type, token);
                     skip(";");
                     break;
+
                 case "required":
                 case "optional":
                 case "repeated":
@@ -373,125 +411,123 @@ function parse(source, root, options) {
                 default:
                     throw illegal(token); // there are no groups with proto3 semantics
             }
-        }
-        skip(";", true);
-        parent.add(type).add(field);
+        });
+        parent.add(type)
+              .add(field);
     }
 
     function parseMapField(parent) {
         skip("<");
         var keyType = next();
 
-        /* istanbul ignore next */
+        /* istanbul ignore if */
         if (types.mapKey[keyType] === undefined)
             throw illegal(keyType, "type");
+
         skip(",");
         var valueType = next();
-        /* istanbul ignore next */
-        if (!isTypeRef(valueType))
+
+        /* istanbul ignore if */
+        if (!typeRefRe.test(valueType))
             throw illegal(valueType, "type");
+
         skip(">");
         var name = next();
-        /* istanbul ignore next */
-        if (!isName(name))
+
+        /* istanbul ignore if */
+        if (!nameRe.test(name))
             throw illegal(name, "name");
 
-        name = applyCase(name);
         skip("=");
-        var field = new MapField(name, parseId(next()), keyType, valueType),
-            trailingLine = tn.line();
-        field.comment = cmnt();
-        field.filename = parse.filename;
-        parseInlineOptions(field);
-        if (!field.comment)
-            field.comment = cmnt(trailingLine);
+        var field = new MapField(applyCase(name), parseId(next()), keyType, valueType);
+        ifBlock(field, function parseMapField_block(token) {
+
+            /* istanbul ignore else */
+            if (token === "option") {
+                parseOption(field, token);
+                skip(";");
+            } else
+                throw illegal(token);
+
+        }, function parseMapField_line() {
+            parseInlineOptions(field);
+        });
         parent.add(field);
     }
 
     function parseOneOf(parent, token) {
-        var name = next();
 
-        /* istanbul ignore next */
-        if (!isName(name))
-            throw illegal(name, "name");
+        /* istanbul ignore if */
+        if (!nameRe.test(token = next()))
+            throw illegal(token, "name");
 
-        name = applyCase(name);
-        var oneof = new OneOf(name),
-            trailingLine = tn.line();
-        oneof.comment = cmnt();
-        oneof.filename = parse.filename;
-        if (skip("{", true)) {
-            while ((token = next()) !== "}") {
-                if (token === "option") {
-                    parseOption(oneof, token);
-                    skip(";");
-                } else {
-                    push(token);
-                    parseField(oneof, "optional");
-                }
+        var oneof = new OneOf(applyCase(token));
+        ifBlock(oneof, function parseOneOf_block(token) {
+            if (token === "option") {
+                parseOption(oneof, token);
+                skip(";");
+            } else {
+                push(token);
+                parseField(oneof, "optional");
             }
-            skip(";", true);
-        } else {
-            skip(";");
-            if (!oneof.comment)
-                oneof.comment = cmnt(trailingLine);
-        }
+        });
         parent.add(oneof);
     }
 
     function parseEnum(parent, token) {
-        var name = next();
 
-        /* istanbul ignore next */
-        if (!isName(name))
-            throw illegal(name, "name");
+        /* istanbul ignore if */
+        if (!nameRe.test(token = next()))
+            throw illegal(token, "name");
 
-        var enm = new Enum(name);
-        enm.comment = cmnt();
-        enm.filename = parse.filename;
-        if (skip("{", true)) {
-            while ((token = next()) !== "}") {
-                if (lower(token) === "option") {
-                    parseOption(enm, token);
-                    skip(";");
-                } else
-                    parseEnumValue(enm, token);
-            }
-            skip(";", true);
-        } else
-            skip(";");
+        var enm = new Enum(token);
+        ifBlock(enm, function parseEnum_block(token) {
+            if (token === "option") {
+                parseOption(enm, token);
+                skip(";");
+            } else
+                parseEnumValue(enm, token);
+        });
         parent.add(enm);
     }
 
     function parseEnumValue(parent, token) {
 
-        /* istanbul ignore next */
-        if (!isName(token))
+        /* istanbul ignore if */
+        if (!nameRe.test(token))
             throw illegal(token, "name");
 
-        var name = token;
         skip("=");
         var value = parseId(next(), true),
-            trailingLine = tn.line();
-        parent.add(name, value, cmnt());
-        parseInlineOptions({}); // skips enum value options
-        if (!parent.comments[name])
-            parent.comments[name] = cmnt(trailingLine);
+            dummy = {};
+        ifBlock(dummy, function parseEnumValue_block(token) {
+
+            /* istanbul ignore else */
+            if (token === "option") {
+                parseOption(dummy, token); // skip
+                skip(";");
+            } else
+                throw illegal(token);
+
+        }, function parseEnumValue_line() {
+            parseInlineOptions(dummy); // skip
+        });
+        parent.add(token, value, dummy.comment);
     }
 
     function parseOption(parent, token) {
-        var custom = skip("(", true);
-        var name = next();
+        var isCustom = skip("(", true);
 
-        /* istanbul ignore next */
-        if (!isTypeRef(name))
-            throw illegal(name, "name");
+        /* istanbul ignore if */
+        if (!typeRefRe.test(token = next()))
+            throw illegal(token, "name");
 
-        if (custom) {
+        var name = token;
+        if (isCustom) {
             skip(")");
             name = "(" + name + ")";
             token = peek();
-            if (isFqTypeRef(token)) {
+            if (fqTypeRefRe.test(token)) {
                 name += token;
                 next();
             }
@@ -502,10 +538,11 @@ function parse(source, root, options) {
 
     function parseOptionValue(parent, name) {
         if (skip("{", true)) { // { a: "foo" b { c: "bar" } }
-            /* istanbul ignore next */
             do {
-                if (!isName(token = next()))
+                /* istanbul ignore if */
+                if (!nameRe.test(token = next()))
                     throw illegal(token, "name");
+
                 if (peek() === "{")
                     parseOptionValue(parent, name + "." + token);
                 else {
@@ -530,166 +567,150 @@ function parse(source, root, options) {
             } while (skip(",", true));
             skip("]");
         }
-        skip(";");
         return parent;
     }
 
     function parseService(parent, token) {
-        token = next();
 
-        /* istanbul ignore next */
-        if (!isName(token))
+        /* istanbul ignore if */
+        if (!nameRe.test(token = next()))
             throw illegal(token, "service name");
 
-        var name = token;
-        var service = new Service(name);
-        service.comment = cmnt();
-        service.filename = parse.filename;
-        if (skip("{", true)) {
-            while ((token = next()) !== "}") {
-                var tokenLower = lower(token);
-                switch (tokenLower) {
-                    case "option":
-                        parseOption(service, tokenLower);
-                        skip(";");
-                        break;
-                    case "rpc":
-                        parseMethod(service, tokenLower);
-                        break;
+        var service = new Service(token);
+        ifBlock(service, function parseService_block(token) {
+            if (parseCommon(service, token))
+                return;
 
-                    /* istanbul ignore next */
-                    default:
-                        throw illegal(token);
-                }
-            }
-            skip(";", true);
-        } else
-            skip(";");
+            /* istanbul ignore else */
+            if (token === "rpc")
+                parseMethod(service, token);
+            else
+                throw illegal(token);
+        });
         parent.add(service);
     }
 
     function parseMethod(parent, token) {
         var type = token;
-        var name = next();
 
-        /* istanbul ignore next */
-        if (!isName(name))
-            throw illegal(name, "name");
-        var requestType, requestStream,
+        /* istanbul ignore if */
+        if (!nameRe.test(token = next()))
+            throw illegal(token, "name");
+
+        var name = token,
+            requestType, requestStream,
             responseType, responseStream;
+
         skip("(");
         if (skip("stream", true))
             requestStream = true;
-        /* istanbul ignore next */
-        if (!isTypeRef(token = next()))
+
+        /* istanbul ignore if */
+        if (!typeRefRe.test(token = next()))
             throw illegal(token);
+
         requestType = token;
         skip(")"); skip("returns"); skip("(");
         if (skip("stream", true))
             responseStream = true;
-        /* istanbul ignore next */
-        if (!isTypeRef(token = next()))
+
+        /* istanbul ignore if */
+        if (!typeRefRe.test(token = next()))
             throw illegal(token);
 
         responseType = token;
         skip(")");
-        var method = new Method(name, type, requestType, responseType, requestStream, responseStream),
-            trailingLine = tn.line();
-        method.comment = cmnt();
-        method.filename = parse.filename;
-        if (skip("{", true)) {
-            while ((token = next()) !== "}") {
-                var tokenLower = lower(token);
-                switch (tokenLower) {
-                    case "option":
-                        parseOption(method, tokenLower);
-                        skip(";");
-                        break;
 
-                    /* istanbul ignore next */
-                    default:
-                        throw illegal(token);
-                }
-            }
-            skip(";", true);
-        } else {
-            skip(";");
-            if (!method.comment)
-                method.comment = cmnt(trailingLine);
-        }
+        var method = new Method(name, type, requestType, responseType, requestStream, responseStream);
+        ifBlock(method, function parseMethod_block(token) {
+
+            /* istanbul ignore else */
+            if (token === "option") {
+                parseOption(method, token);
+                skip(";");
+            } else
+                throw illegal(token);
+
+        });
         parent.add(method);
     }
 
     function parseExtension(parent, token) {
-        var reference = next();
 
-        /* istanbul ignore next */
-        if (!isTypeRef(reference))
-            throw illegal(reference, "reference");
+        /* istanbul ignore if */
+        if (!typeRefRe.test(token = next()))
+            throw illegal(token, "reference");
 
-        if (skip("{", true)) {
-            while ((token = next()) !== "}") {
-                var tokenLower = lower(token);
-                switch (tokenLower) {
-                    case "required":
-                    case "repeated":
-                    case "optional":
-                        parseField(parent, tokenLower, reference);
-                        break;
-                    default:
-                        /* istanbul ignore next */
-                        if (!isProto3 || !isTypeRef(token))
-                            throw illegal(token);
-                        push(token);
-                        parseField(parent, "optional", reference);
-                        break;
-                }
+        var reference = token;
+        ifBlock(null, function parseExtension_block(token) {
+            switch (token) {
+
+                case "required":
+                case "repeated":
+                case "optional":
+                    parseField(parent, token, reference);
+                    break;
+
+                default:
+                    /* istanbul ignore if */
+                    if (!isProto3 || !typeRefRe.test(token))
+                        throw illegal(token);
+                    push(token);
+                    parseField(parent, "optional", reference);
+                    break;
             }
-            skip(";", true);
-        } else
-            skip(";");
+        });
     }
 
     var token;
     while ((token = next()) !== null) {
-        var tokenLower = lower(token);
-        switch (tokenLower) {
+        switch (token) {
 
             case "package":
-                /* istanbul ignore next */
+
+                /* istanbul ignore if */
                 if (!head)
                     throw illegal(token);
+
                 parsePackage();
                 break;
 
             case "import":
-                /* istanbul ignore next */
+
+                /* istanbul ignore if */
                 if (!head)
                     throw illegal(token);
+
                 parseImport();
                 break;
 
             case "syntax":
-                /* istanbul ignore next */
+
+                /* istanbul ignore if */
                 if (!head)
                     throw illegal(token);
+
                 parseSyntax();
                 break;
 
             case "option":
-                /* istanbul ignore next */
+
+                /* istanbul ignore if */
                 if (!head)
                     throw illegal(token);
+
                 parseOption(ptr, token);
                 skip(";");
                 break;
 
             default:
+
                 /* istanbul ignore else */
                 if (parseCommon(ptr, token)) {
                     head = false;
                     continue;
                 }
+
                 /* istanbul ignore next */
                 throw illegal(token);
         }
@@ -710,9 +731,9 @@ function parse(source, root, options) {
  * @name parse
  * @function
  * @param {string} source Source contents
- * @param {ParseOptions} [options] Parse options. Defaults to {@link parse.defaults} when omitted.
- * @returns {ParserResult} Parser result
+ * @param {IParseOptions} [options] Parse options. Defaults to {@link parse.defaults} when omitted.
+ * @returns {IParserResult} Parser result
  * @property {string} filename=null Currently processing file name for error reporting, if known
- * @property {ParseOptions} defaults Default {@link ParseOptions}
+ * @property {IParseOptions} defaults Default {@link IParseOptions}
  * @variation 2
  */

@@ -7,7 +7,7 @@ protobuf.build = "light";
  * A node-style callback as used by {@link load} and {@link Root#load}.
  * @typedef LoadCallback
  * @type {function}
- * @param {?Error} error Error, if any, otherwise `null`
+ * @param {Error|null} error Error, if any, otherwise `null`
  * @param {Root} [root] Root, if there hasn't been an error
  * @returns {undefined}
  */
@@ -90,8 +90,8 @@ protobuf.Service          = require("./service");
 protobuf.Method           = require("./method");
 
 // Runtime
-protobuf.Class            = require("./class");
 protobuf.Message          = require("./message");
+protobuf.wrappers         = require("./wrappers");
 
 // Utility
 protobuf.types            = require("./types");
@@ -101,3 +101,4 @@ protobuf.util             = require("./util");
 protobuf.ReflectionObject._configure(protobuf.Root);
 protobuf.Namespace._configure(protobuf.Type, protobuf.Service);
 protobuf.Root._configure(protobuf.Type);
+protobuf.Field._configure(protobuf.Type);

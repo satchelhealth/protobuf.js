@@ -5,50 +5,94 @@ var delimRe        = /[\s{}=;:[\],'"()<>]/g,
     stringDoubleRe = /(?:"([^"\\]*(?:\\.[^"\\]*)*)")/g,
     stringSingleRe = /(?:'([^'\\]*(?:\\.[^'\\]*)*)')/g;
 
-/**
- * Unescapes a string.
- * @param {string} str String to unescape
- * @returns {string} Unescaped string
- * @property {Object.<string,string>} map Special characters map
- * @ignore
- */
-function unescape(str) {
-    return str.replace(/\\(.?)/g, function($0, $1) {
-        switch ($1) {
-            case "\\":
-            case "":
-                return $1;
-            default:
-                return unescape.map[$1] || "";
-        }
-    });
-}
+var setCommentRe = /^ *[*/]+ */,
+    setCommentSplitRe = /\n/g,
+    whitespaceRe = /\s/,
+    unescapeRe = /\\(.?)/g;
 
-unescape.map = {
+var unescapeMap = {
     "0": "\0",
     "r": "\r",
     "n": "\n",
     "t": "\t"
 };
 
+/**
+ * Unescapes a string.
+ * @param {string} str String to unescape
+ * @returns {string} Unescaped string
+ * @property {Object.<string,string>} map Special characters map
+ * @memberof tokenize
+ */
+function unescape(str) {
+    return str.replace(unescapeRe, function($0, $1) {
+        switch ($1) {
+            case "\\":
+            case "":
+                return $1;
+            default:
+                return unescapeMap[$1] || "";
+        }
+    });
+}
+
 tokenize.unescape = unescape;
 
 /**
+ * Gets the next token and advances.
+ * @typedef TokenizerHandleNext
+ * @type {function}
+ * @returns {string|null} Next token or `null` on eof
+ */
+
+/**
+ * Peeks for the next token.
+ * @typedef TokenizerHandlePeek
+ * @type {function}
+ * @returns {string|null} Next token or `null` on eof
+ */
+
+/**
+ * Pushes a token back to the stack.
+ * @typedef TokenizerHandlePush
+ * @type {function}
+ * @param {string} token Token
+ * @returns {undefined}
+ */
+
+/**
+ * Skips the next token.
+ * @typedef TokenizerHandleSkip
+ * @type {function}
+ * @param {string} expected Expected token
+ * @param {boolean} [optional=false] If optional
+ * @returns {boolean} Whether the token matched
+ * @throws {Error} If the token didn't match and is not optional
+ */
+
+/**
+ * Gets the comment on the previous line or, alternatively, the line comment on the specified line.
+ * @typedef TokenizerHandleCmnt
+ * @type {function}
+ * @param {number} [line] Line number
+ * @returns {string|null} Comment text or `null` if none
+ */
+
+/**
  * Handle object returned from {@link tokenize}.
- * @typedef {Object.<string,*>} TokenizerHandle
- * @property {function():number} line Gets the current line number
- * @property {function():?string} next Gets the next token and advances (`null` on eof)
- * @property {function():?string} peek Peeks for the next token (`null` on eof)
- * @property {function(string)} push Pushes a token back to the stack
- * @property {function(string, boolean=):boolean} skip Skips a token, returns its presence and advances or, if non-optional and not present, throws
- * @property {function(number=):?string} cmnt Gets the comment on the previous line or the line comment on the specified line, if any
+ * @interface ITokenizerHandle
+ * @property {TokenizerHandleNext} next Gets the next token and advances (`null` on eof)
+ * @property {TokenizerHandlePeek} peek Peeks for the next token (`null` on eof)
+ * @property {TokenizerHandlePush} push Pushes a token back to the stack
+ * @property {TokenizerHandleSkip} skip Skips a token, returns its presence and advances or, if non-optional and not present, throws
+ * @property {TokenizerHandleCmnt} cmnt Gets the comment on the previous line or the line comment on the specified line, if any
+ * @property {number} line Current line number
  */
 
 /**
  * Tokenizes the given .proto source and returns an object with useful utility functions.
  * @param {string} source Source contents
- * @returns {TokenizerHandle} Tokenizer handle
- * @property {function(string):string} unescape Unescapes a string
+ * @returns {ITokenizerHandle} Tokenizer handle
  */
 function tokenize(source) {
     /* eslint-disable callback-return */
@@ -59,7 +103,8 @@ function tokenize(source) {
         line = 1,
         commentType = null,
         commentText = null,
-        commentLine = 0;
+        commentLine = 0,
+        commentLineEmpty = false;
 
     var stack = [];
 
@@ -113,11 +158,20 @@ function tokenize(source) {
     function setComment(start, end) {
         commentType = source.charAt(start++);
         commentLine = line;
+        commentLineEmpty = false;
+        var offset = start - 3, // "///" or "/**"
+            c;
+        do {
+            if (--offset < 0 || (c = source.charAt(offset)) === "\n") {
+                commentLineEmpty = true;
+                break;
+            }
+        } while (c === " " || c === "\t");
         var lines = source
             .substring(start, end)
-            .split(/\n/g);
+            .split(setCommentSplitRe);
         for (var i = 0; i < lines.length; ++i)
-            lines[i] = lines[i].replace(/^ *[*/]+ */, "").trim();
+            lines[i] = lines[i].replace(setCommentRe, "").trim();
         commentText = lines
             .join("\n")
             .trim();
@@ -125,7 +179,7 @@ function tokenize(source) {
 
     /**
      * Obtains the next token.
-     * @returns {?string} Next token or `null` on eof
+     * @returns {string|null} Next token or `null` on eof
      * @inner
      */
     function next() {
@@ -137,12 +191,12 @@ function tokenize(source) {
             prev,
             curr,
             start,
-            isComment;
+            isDoc;
         do {
             if (offset === length)
                 return null;
             repeat = false;
-            while (/\s/.test(curr = charAt(offset))) {
+            while (whitespaceRe.test(curr = charAt(offset))) {
                 if (curr === "\n")
                     ++line;
                 if (++offset === length)
@@ -152,17 +206,17 @@ function tokenize(source) {
                 if (++offset === length)
                     throw illegal("comment");
                 if (charAt(offset) === "/") { // Line
-                    isComment = charAt(start = offset + 1) === "/";
+                    isDoc = charAt(start = offset + 1) === "/";
                     while (charAt(++offset) !== "\n")
                         if (offset === length)
                             return null;
                     ++offset;
-                    if (isComment)
+                    if (isDoc) /// Comment
                         setComment(start, offset - 1);
                     ++line;
                     repeat = true;
                 } else if ((curr = charAt(offset)) === "*") { /* Block */
-                    isComment = charAt(start = offset + 1) === "*";
+                    isDoc = charAt(start = offset + 1) === "*";
                     do {
                         if (curr === "\n")
                             ++line;
@@ -172,7 +226,7 @@ function tokenize(source) {
                         curr = charAt(offset);
                     } while (prev !== "*" || curr !== "/");
                     ++offset;
-                    if (isComment)
+                    if (isDoc) /** Comment */
                         setComment(start, offset - 2);
                     repeat = true;
                 } else
@@ -206,7 +260,7 @@ function tokenize(source) {
 
     /**
      * Peeks for the next token.
-     * @returns {?string} Token or `null` on eof
+     * @returns {string|null} Token or `null` on eof
      * @inner
      */
     function peek() {
@@ -239,29 +293,35 @@ function tokenize(source) {
         return false;
     }
 
-    return {
+    /**
+     * Gets a comment.
+     * @param {number} [trailingLine] Line number if looking for a trailing comment
+     * @returns {string|null} Comment text
+     * @inner
+     */
+    function cmnt(trailingLine) {
+        var ret = null;
+        if (trailingLine === undefined) {
+            if (commentLine === line - 1 && (commentType === "*" || commentLineEmpty))
+                ret = commentText;
+        } else {
+            /* istanbul ignore else */
+            if (commentLine < trailingLine)
+                peek();
+            if (commentLine === trailingLine && !commentLineEmpty && commentType === "/")
+                ret = commentText;
+        }
+        return ret;
+    }
+
+    return Object.defineProperty({
         next: next,
         peek: peek,
         push: push,
         skip: skip,
-        line: function() {
-            return line;
-        },
-        cmnt: function(trailingLine) {
-            var ret;
-            if (trailingLine === undefined)
-                ret = commentLine === line - 1 && commentText || null;
-            else {
-                if (!commentText)
-                    peek();
-                ret = commentLine === trailingLine && commentType === "/" && commentText || null;
-            }
-            if (ret) {
-                commentType = commentText = null;
-                commentLine = 0;
-            }
-            return ret;
-        }
-    };
+        cmnt: cmnt
+    }, "line", {
+        get: function() { return line; }
+    });
     /* eslint-enable callback-return */
 }

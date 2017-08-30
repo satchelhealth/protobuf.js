@@ -4,12 +4,14 @@ var protobuf = require("..");
 
 var def = {
     methods: {},
-    nested: undefined,
-    options: undefined
+    nested: {
+        SomeEnum: {
+            values: {}
+        }
+    }
 };
 
 var methodDef = {
-    type: undefined,
     requestType: "MyRequest",
     requestStream: true,
     responseType: "MyResponse",

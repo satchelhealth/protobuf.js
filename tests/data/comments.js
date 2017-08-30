@@ -6,51 +6,67 @@ var $protobuf = require("../../minimal");
 // Common aliases
 var $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
 
-// Lazily resolved type references
-var $lazyTypes = [];
-
 // Exported root namespace
 var $root = $protobuf.roots.test_comments || ($protobuf.roots.test_comments = {});
 
 $root.Test1 = (function() {
 
     /**
+     * Properties of a Test1.
+     * @exports ITest1
+     * @interface ITest1
+     * @property {string|null} [field1] Field with a comment.
+     * @property {number|null} [field2] Test1 field2
+     * @property {boolean|null} [field3] Field with a comment and a <a href="http://example.com/foo/">link</a>
+     */
+
+    /**
      * Constructs a new Test1.
+     * @exports Test1
      * @classdesc Message
      * with
      * a
      * comment.
-     * @exports Test1
      * @constructor
-     * @param {Object} [properties] Properties to set
+     * @param {ITest1=} [properties] Properties to set
      */
     function Test1(properties) {
         if (properties)
             for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                this[keys[i]] = properties[keys[i]];
+                if (properties[keys[i]] != null)
+                    this[keys[i]] = properties[keys[i]];
     }
 
     /**
      * Field with a comment.
-     * @type {string}
+     * @member {string} field1
+     * @memberof Test1
+     * @instance
      */
     Test1.prototype.field1 = "";
 
     /**
      * Test1 field2.
-     * @type {number}
+     * @member {number} field2
+     * @memberof Test1
+     * @instance
      */
     Test1.prototype.field2 = 0;
 
     /**
      * Field with a comment and a <a href="http://example.com/foo/">link</a>
-     * @type {boolean}
+     * @member {boolean} field3
+     * @memberof Test1
+     * @instance
      */
     Test1.prototype.field3 = false;
 
     /**
      * Creates a new Test1 instance using the specified properties.
-     * @param {Object} [properties] Properties to set
+     * @function create
+     * @memberof Test1
+     * @static
+     * @param {ITest1=} [properties] Properties to set
      * @returns {Test1} Test1 instance
      */
     Test1.create = function create(properties) {
@@ -58,26 +74,32 @@ $root.Test1 = (function() {
     };
 
     /**
-     * Encodes the specified Test1 message.
-     * @param {Test1|Object} message Test1 message or plain object to encode
+     * Encodes the specified Test1 message. Does not implicitly {@link Test1.verify|verify} messages.
+     * @function encode
+     * @memberof Test1
+     * @static
+     * @param {ITest1} message Test1 message or plain object to encode
      * @param {$protobuf.Writer} [writer] Writer to encode to
      * @returns {$protobuf.Writer} Writer
      */
     Test1.encode = function encode(message, writer) {
         if (!writer)
             writer = $Writer.create();
-        if (message.field1 !== undefined && message.hasOwnProperty("field1"))
+        if (message.field1 != null && message.hasOwnProperty("field1"))
             writer.uint32(/* id 1, wireType 2 =*/10).string(message.field1);
-        if (message.field2 !== undefined && message.hasOwnProperty("field2"))
+        if (message.field2 != null && message.hasOwnProperty("field2"))
             writer.uint32(/* id 2, wireType 0 =*/16).uint32(message.field2);
-        if (message.field3 !== undefined && message.hasOwnProperty("field3"))
+        if (message.field3 != null && message.hasOwnProperty("field3"))
             writer.uint32(/* id 3, wireType 0 =*/24).bool(message.field3);
         return writer;
     };
 
     /**
-     * Encodes the specified Test1 message, length delimited.
-     * @param {Test1|Object} message Test1 message or plain object to encode
+     * Encodes the specified Test1 message, length delimited. Does not implicitly {@link Test1.verify|verify} messages.
+     * @function encodeDelimited
+     * @memberof Test1
+     * @static
+     * @param {ITest1} message Test1 message or plain object to encode
      * @param {$protobuf.Writer} [writer] Writer to encode to
      * @returns {$protobuf.Writer} Writer
      */
@@ -87,9 +109,14 @@ $root.Test1 = (function() {
 
     /**
      * Decodes a Test1 message from the specified reader or buffer.
+     * @function decode
+     * @memberof Test1
+     * @static
      * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
      * @param {number} [length] Message length if known beforehand
      * @returns {Test1} Test1
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
      */
     Test1.decode = function decode(reader, length) {
         if (!(reader instanceof $Reader))
@@ -117,28 +144,38 @@ $root.Test1 = (function() {
 
     /**
      * Decodes a Test1 message from the specified reader or buffer, length delimited.
+     * @function decodeDelimited
+     * @memberof Test1
+     * @static
      * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
      * @returns {Test1} Test1
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
      */
     Test1.decodeDelimited = function decodeDelimited(reader) {
         if (!(reader instanceof $Reader))
-            reader = $Reader(reader);
+            reader = new $Reader(reader);
         return this.decode(reader, reader.uint32());
     };
 
     /**
      * Verifies a Test1 message.
-     * @param {Test1|Object} message Test1 message or plain object to verify
-     * @returns {?string} `null` if valid, otherwise the reason why it is not
+     * @function verify
+     * @memberof Test1
+     * @static
+     * @param {Object.<string,*>} message Plain object to verify
+     * @returns {string|null} `null` if valid, otherwise the reason why it is not
      */
     Test1.verify = function verify(message) {
-        if (message.field1 !== undefined)
+        if (typeof message !== "object" || message === null)
+            return "object expected";
+        if (message.field1 != null && message.hasOwnProperty("field1"))
             if (!$util.isString(message.field1))
                 return "field1: string expected";
-        if (message.field2 !== undefined)
+        if (message.field2 != null && message.hasOwnProperty("field2"))
             if (!$util.isInteger(message.field2))
                 return "field2: integer expected";
-        if (message.field3 !== undefined)
+        if (message.field3 != null && message.hasOwnProperty("field3"))
             if (typeof message.field3 !== "boolean")
                 return "field3: boolean expected";
         return null;
@@ -146,6 +183,9 @@ $root.Test1 = (function() {
 
     /**
      * Creates a Test1 message from a plain object. Also converts values to their respective internal types.
+     * @function fromObject
+     * @memberof Test1
+     * @static
      * @param {Object.<string,*>} object Plain object
      * @returns {Test1} Test1
      */
@@ -153,28 +193,22 @@ $root.Test1 = (function() {
         if (object instanceof $root.Test1)
             return object;
         var message = new $root.Test1();
-        if (object.field1 !== undefined && object.field1 !== null)
+        if (object.field1 != null)
             message.field1 = String(object.field1);
-        if (object.field2 !== undefined && object.field2 !== null)
+        if (object.field2 != null)
             message.field2 = object.field2 >>> 0;
-        if (object.field3 !== undefined && object.field3 !== null)
+        if (object.field3 != null)
             message.field3 = Boolean(object.field3);
         return message;
     };
 
     /**
-     * Creates a Test1 message from a plain object. Also converts values to their respective internal types.
-     * This is an alias of {@link Test1.fromObject}.
-     * @function
-     * @param {Object.<string,*>} object Plain object
-     * @returns {Test1} Test1
-     */
-    Test1.from = Test1.fromObject;
-
-    /**
      * Creates a plain object from a Test1 message. Also converts values to other types if specified.
+     * @function toObject
+     * @memberof Test1
+     * @static
      * @param {Test1} message Test1
-     * @param {$protobuf.ConversionOptions} [options] Conversion options
+     * @param {$protobuf.IConversionOptions} [options] Conversion options
      * @returns {Object.<string,*>} Plain object
      */
     Test1.toObject = function toObject(message, options) {
@@ -186,26 +220,20 @@ $root.Test1 = (function() {
             object.field2 = 0;
             object.field3 = false;
         }
-        if (message.field1 !== undefined && message.field1 !== null && message.hasOwnProperty("field1"))
+        if (message.field1 != null && message.hasOwnProperty("field1"))
             object.field1 = message.field1;
-        if (message.field2 !== undefined && message.field2 !== null && message.hasOwnProperty("field2"))
+        if (message.field2 != null && message.hasOwnProperty("field2"))
             object.field2 = message.field2;
-        if (message.field3 !== undefined && message.field3 !== null && message.hasOwnProperty("field3"))
+        if (message.field3 != null && message.hasOwnProperty("field3"))
             object.field3 = message.field3;
         return object;
     };
 
     /**
-     * Creates a plain object from this Test1 message. Also converts values to other types if specified.
-     * @param {$protobuf.ConversionOptions} [options] Conversion options
-     * @returns {Object.<string,*>} Plain object
-     */
-    Test1.prototype.toObject = function toObject(options) {
-        return this.constructor.toObject(this, options);
-    };
-
-    /**
      * Converts this Test1 to JSON.
+     * @function toJSON
+     * @memberof Test1
+     * @instance
      * @returns {Object.<string,*>} JSON object
      */
     Test1.prototype.toJSON = function toJSON() {
@@ -218,20 +246,31 @@ $root.Test1 = (function() {
 $root.Test2 = (function() {
 
     /**
+     * Properties of a Test2.
+     * @exports ITest2
+     * @interface ITest2
+     */
+
+    /**
      * Constructs a new Test2.
      * @exports Test2
+     * @classdesc Represents a Test2.
      * @constructor
-     * @param {Object} [properties] Properties to set
+     * @param {ITest2=} [properties] Properties to set
      */
     function Test2(properties) {
         if (properties)
             for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                this[keys[i]] = properties[keys[i]];
+                if (properties[keys[i]] != null)
+                    this[keys[i]] = properties[keys[i]];
     }
 
     /**
      * Creates a new Test2 instance using the specified properties.
-     * @param {Object} [properties] Properties to set
+     * @function create
+     * @memberof Test2
+     * @static
+     * @param {ITest2=} [properties] Properties to set
      * @returns {Test2} Test2 instance
      */
     Test2.create = function create(properties) {
@@ -239,8 +278,11 @@ $root.Test2 = (function() {
     };
 
     /**
-     * Encodes the specified Test2 message.
-     * @param {Test2|Object} message Test2 message or plain object to encode
+     * Encodes the specified Test2 message. Does not implicitly {@link Test2.verify|verify} messages.
+     * @function encode
+     * @memberof Test2
+     * @static
+     * @param {ITest2} message Test2 message or plain object to encode
      * @param {$protobuf.Writer} [writer] Writer to encode to
      * @returns {$protobuf.Writer} Writer
      */
@@ -251,8 +293,11 @@ $root.Test2 = (function() {
     };
 
     /**
-     * Encodes the specified Test2 message, length delimited.
-     * @param {Test2|Object} message Test2 message or plain object to encode
+     * Encodes the specified Test2 message, length delimited. Does not implicitly {@link Test2.verify|verify} messages.
+     * @function encodeDelimited
+     * @memberof Test2
+     * @static
+     * @param {ITest2} message Test2 message or plain object to encode
      * @param {$protobuf.Writer} [writer] Writer to encode to
      * @returns {$protobuf.Writer} Writer
      */
@@ -262,9 +307,14 @@ $root.Test2 = (function() {
 
     /**
      * Decodes a Test2 message from the specified reader or buffer.
+     * @function decode
+     * @memberof Test2
+     * @static
      * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
      * @param {number} [length] Message length if known beforehand
      * @returns {Test2} Test2
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
      */
     Test2.decode = function decode(reader, length) {
         if (!(reader instanceof $Reader))
@@ -283,26 +333,39 @@ $root.Test2 = (function() {
 
     /**
      * Decodes a Test2 message from the specified reader or buffer, length delimited.
+     * @function decodeDelimited
+     * @memberof Test2
+     * @static
      * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
      * @returns {Test2} Test2
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
      */
     Test2.decodeDelimited = function decodeDelimited(reader) {
         if (!(reader instanceof $Reader))
-            reader = $Reader(reader);
+            reader = new $Reader(reader);
         return this.decode(reader, reader.uint32());
     };
 
     /**
      * Verifies a Test2 message.
-     * @param {Test2|Object} message Test2 message or plain object to verify
-     * @returns {?string} `null` if valid, otherwise the reason why it is not
+     * @function verify
+     * @memberof Test2
+     * @static
+     * @param {Object.<string,*>} message Plain object to verify
+     * @returns {string|null} `null` if valid, otherwise the reason why it is not
      */
-    Test2.verify = function verify() {
+    Test2.verify = function verify(message) {
+        if (typeof message !== "object" || message === null)
+            return "object expected";
         return null;
     };
 
     /**
      * Creates a Test2 message from a plain object. Also converts values to their respective internal types.
+     * @function fromObject
+     * @memberof Test2
+     * @static
      * @param {Object.<string,*>} object Plain object
      * @returns {Test2} Test2
      */
@@ -313,18 +376,12 @@ $root.Test2 = (function() {
     };
 
     /**
-     * Creates a Test2 message from a plain object. Also converts values to their respective internal types.
-     * This is an alias of {@link Test2.fromObject}.
-     * @function
-     * @param {Object.<string,*>} object Plain object
-     * @returns {Test2} Test2
-     */
-    Test2.from = Test2.fromObject;
-
-    /**
      * Creates a plain object from a Test2 message. Also converts values to other types if specified.
+     * @function toObject
+     * @memberof Test2
+     * @static
      * @param {Test2} message Test2
-     * @param {$protobuf.ConversionOptions} [options] Conversion options
+     * @param {$protobuf.IConversionOptions} [options] Conversion options
      * @returns {Object.<string,*>} Plain object
      */
     Test2.toObject = function toObject() {
@@ -332,16 +389,10 @@ $root.Test2 = (function() {
     };
 
     /**
-     * Creates a plain object from this Test2 message. Also converts values to other types if specified.
-     * @param {$protobuf.ConversionOptions} [options] Conversion options
-     * @returns {Object.<string,*>} Plain object
-     */
-    Test2.prototype.toObject = function toObject(options) {
-        return this.constructor.toObject(this, options);
-    };
-
-    /**
      * Converts this Test2 to JSON.
+     * @function toJSON
+     * @memberof Test2
+     * @instance
      * @returns {Object.<string,*>} JSON object
      */
     Test2.prototype.toJSON = function toJSON() {
@@ -354,20 +405,19 @@ $root.Test2 = (function() {
 /**
  * Test3 enum.
  * @exports Test3
- * @enum {number}
+ * @enum {string}
  * @property {number} ONE=1 Value with a comment.
  * @property {number} TWO=2 TWO value
- * @property {number} THREE=3 Value with a comment.
+ * @property {number} THREE=3 Preferred value with a comment.
+ * @property {number} FOUR=4 Other value with a comment.
  */
 $root.Test3 = (function() {
     var valuesById = {}, values = Object.create(valuesById);
     values[valuesById[1] = "ONE"] = 1;
     values[valuesById[2] = "TWO"] = 2;
     values[valuesById[3] = "THREE"] = 3;
+    values[valuesById[4] = "FOUR"] = 4;
     return values;
 })();
-
-// Resolve lazy type references to actual types
-$util.lazyResolve($root, $lazyTypes);
 
 module.exports = $root;

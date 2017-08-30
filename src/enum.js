@@ -46,13 +46,21 @@ function Enum(name, values, options) {
 
     if (values)
         for (var keys = Object.keys(values), i = 0; i < keys.length; ++i)
-            this.valuesById[ this.values[keys[i]] = values[keys[i]] ] = keys[i];
+            if (typeof values[keys[i]] === "number") // use forward entries only
+                this.valuesById[ this.values[keys[i]] = values[keys[i]] ] = keys[i];
 }
 
 /**
- * Creates an enum from JSON.
+ * Enum descriptor.
+ * @interface IEnum
+ * @property {Object.<string,number>} values Enum values
+ * @property {Object.<string,*>} [options] Enum options
+ */
+
+/**
+ * Constructs an enum from an enum descriptor.
  * @param {string} name Enum name
- * @param {Object.<string,*>} json JSON object
+ * @param {IEnum} json Enum descriptor
  * @returns {Enum} Created enum
  * @throws {TypeError} If arguments are invalid
  */
@@ -61,20 +69,21 @@ Enum.fromJSON = function fromJSON(name, json) {
 };
 
 /**
- * @override
+ * Converts this enum to an enum descriptor.
+ * @returns {IEnum} Enum descriptor
  */
 Enum.prototype.toJSON = function toJSON() {
-    return {
-        options : this.options,
-        values  : this.values
-    };
+    return util.toObject([
+        "options" , this.options,
+        "values"  , this.values
+    ]);
 };
 
 /**
  * Adds a value to this enum.
  * @param {string} name Value name
  * @param {number} id Value id
- * @param {?string} comment Comment, if any
+ * @param {string} [comment] Comment, if any
  * @returns {Enum} `this`
  * @throws {TypeError} If arguments are invalid
  * @throws {Error} If there is already a value with this name or id
@@ -91,12 +100,14 @@ Enum.prototype.add = function(name, id, comment) {
     if (this.values[name] !== undefined)
         throw Error("duplicate name");
 
-    if (this.valuesById[id] !== undefined)
-        throw Error("duplicate id");
+    if (this.valuesById[id] !== undefined) {
+        if (!(this.options && this.options.allow_alias))
+            throw Error("duplicate id");
+        this.values[name] = id;
+    } else
+        this.valuesById[this.values[name] = id] = name;
 
-    this.valuesById[this.values[name] = id] = name;
     this.comments[name] = comment || null;
-
     return this;
 };
 

@@ -5,25 +5,9 @@ var protobuf = exports;
  * Build type, one of `"full"`, `"light"` or `"minimal"`.
  * @name build
  * @type {string}
+ * @const
  */
 protobuf.build = "minimal";
-
-/**
- * Named roots.
- * This is where pbjs stores generated structures (the option `-r, --root` specifies a name).
- * Can also be used manually to make roots available accross modules.
- * @name roots
- * @type {Object.<string,Root>}
- * @example
- * // pbjs -r myroot -o compiled.js ...
- * 
- * // in another module:
- * require("./compiled.js");
- * 
- * // in any subsequent module:
- * var root = protobuf.roots["myroot"];
- */
-protobuf.roots = {};
 
 // Serialization
 protobuf.Writer       = require("./writer");
@@ -34,6 +18,7 @@ protobuf.BufferReader = require("./reader_buffer");
 // Utility
 protobuf.util         = require("./util/minimal");
 protobuf.rpc          = require("./rpc");
+protobuf.roots        = require("./roots");
 protobuf.configure    = configure;
 
 /* istanbul ignore next */

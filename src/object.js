@@ -37,7 +37,7 @@ function ReflectionObject(name, options) {
 
     /**
      * Parent namespace.
-     * @type {?Namespace}
+     * @type {Namespace|null}
      */
     this.parent = null;
 
@@ -49,13 +49,13 @@ function ReflectionObject(name, options) {
 
     /**
      * Comment text, if any.
-     * @type {?string}
+     * @type {string|null}
      */
     this.comment = null;
 
     /**
      * Defining file name.
-     * @type {?string}
+     * @type {string|null}
      */
     this.filename = null;
 }
@@ -97,8 +97,8 @@ Object.defineProperties(ReflectionObject.prototype, {
 });
 
 /**
- * Converts this reflection object to its JSON representation.
- * @returns {Object.<string,*>} JSON object
+ * Converts this reflection object to its descriptor representation.
+ * @returns {Object.<string,*>} Descriptor
  * @abstract
  */
 ReflectionObject.prototype.toJSON = /* istanbul ignore next */ function toJSON() {

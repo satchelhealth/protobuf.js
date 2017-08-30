@@ -675,18 +675,12 @@
                     "path": {
                       "rule": "repeated",
                       "type": "int32",
-                      "id": 1,
-                      "options": {
-                        "packed": true
-                      }
+                      "id": 1
                     },
                     "span": {
                       "rule": "repeated",
                       "type": "int32",
-                      "id": 2,
-                      "options": {
-                        "packed": true
-                      }
+                      "id": 2
                     },
                     "leadingComments": {
                       "type": "string",
@@ -719,10 +713,7 @@
                     "path": {
                       "rule": "repeated",
                       "type": "int32",
-                      "id": 1,
-                      "options": {
-                        "packed": true
-                      }
+                      "id": 1
                     },
                     "sourceFile": {
                       "type": "string",

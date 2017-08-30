@@ -1,27 +1,29 @@
 "use strict";
 module.exports = common;
 
+var commonRe = /\/|\./;
+
 /**
  * Provides common type definitions.
  * Can also be used to provide additional google types or your own custom types.
  * @param {string} name Short name as in `google/protobuf/[name].proto` or full file name
  * @param {Object.<string,*>} json JSON definition within `google.protobuf` if a short name, otherwise the file's root definition
  * @returns {undefined}
- * @property {Object.<string,*>} google/protobuf/any.proto Any
- * @property {Object.<string,*>} google/protobuf/duration.proto Duration
- * @property {Object.<string,*>} google/protobuf/empty.proto Empty
- * @property {Object.<string,*>} google/protobuf/struct.proto Struct, Value, NullValue and ListValue
- * @property {Object.<string,*>} google/protobuf/timestamp.proto Timestamp
- * @property {Object.<string,*>} google/protobuf/wrappers.proto Wrappers
+ * @property {INamespace} google/protobuf/any.proto Any
+ * @property {INamespace} google/protobuf/duration.proto Duration
+ * @property {INamespace} google/protobuf/empty.proto Empty
+ * @property {INamespace} google/protobuf/struct.proto Struct, Value, NullValue and ListValue
+ * @property {INamespace} google/protobuf/timestamp.proto Timestamp
+ * @property {INamespace} google/protobuf/wrappers.proto Wrappers
  * @example
  * // manually provides descriptor.proto (assumes google/protobuf/ namespace and .proto extension)
  * protobuf.common("descriptor", descriptorJson);
- * 
+ *
  * // manually provides a custom definition (uses my.foo namespace)
  * protobuf.common("my/foo/bar.proto", myFooBarJson);
  */
 function common(name, json) {
-    if (!/\/|\./.test(name)) {
+    if (!commonRe.test(name)) {
         name = "google/protobuf/" + name + ".proto";
         json = { nested: { google: { nested: { protobuf: { nested: json } } } } };
     }
@@ -39,6 +41,15 @@ function common(name, json) {
 // the repository or package within the google/protobuf directory.
 
 common("any", {
+
+    /**
+     * Properties of a google.protobuf.Any message.
+     * @interface IAny
+     * @type {Object}
+     * @property {string} [typeUrl]
+     * @property {Uint8Array} [bytes]
+     * @memberof common
+     */
     Any: {
         fields: {
             type_url: {
@@ -56,6 +67,15 @@ common("any", {
 var timeType;
 
 common("duration", {
+
+    /**
+     * Properties of a google.protobuf.Duration message.
+     * @interface IDuration
+     * @type {Object}
+     * @property {number|Long} [seconds]
+     * @property {number} [nanos]
+     * @memberof common
+     */
     Duration: timeType = {
         fields: {
             seconds: {
@@ -71,16 +91,39 @@ common("duration", {
 });
 
 common("timestamp", {
+
+    /**
+     * Properties of a google.protobuf.Timestamp message.
+     * @interface ITimestamp
+     * @type {Object}
+     * @property {number|Long} [seconds]
+     * @property {number} [nanos]
+     * @memberof common
+     */
     Timestamp: timeType
 });
 
 common("empty", {
+
+    /**
+     * Properties of a google.protobuf.Empty message.
+     * @interface IEmpty
+     * @memberof common
+     */
     Empty: {
         fields: {}
     }
 });
 
 common("struct", {
+
+    /**
+     * Properties of a google.protobuf.Struct message.
+     * @interface IStruct
+     * @type {Object}
+     * @property {Object.<string,IValue>} [fields]
+     * @memberof common
+     */
     Struct: {
         fields: {
             fields: {
@@ -90,6 +133,20 @@ common("struct", {
             }
         }
     },
+
+    /**
+     * Properties of a google.protobuf.Value message.
+     * @interface IValue
+     * @type {Object}
+     * @property {string} [kind]
+     * @property {0} [nullValue]
+     * @property {number} [numberValue]
+     * @property {string} [stringValue]
+     * @property {boolean} [boolValue]
+     * @property {IStruct} [structValue]
+     * @property {IListValue} [listValue]
+     * @memberof common
+     */
     Value: {
         oneofs: {
             kind: {
@@ -130,11 +187,20 @@ common("struct", {
             }
         }
     },
+
     NullValue: {
         values: {
             NULL_VALUE: 0
         }
     },
+
+    /**
+     * Properties of a google.protobuf.ListValue message.
+     * @interface IListValue
+     * @type {Object}
+     * @property {Array.<IValue>} [values]
+     * @memberof common
+     */
     ListValue: {
         fields: {
             values: {
@@ -147,6 +213,14 @@ common("struct", {
 });
 
 common("wrappers", {
+
+    /**
+     * Properties of a google.protobuf.DoubleValue message.
+     * @interface IDoubleValue
+     * @type {Object}
+     * @property {number} [value]
+     * @memberof common
+     */
     DoubleValue: {
         fields: {
             value: {
@@ -155,6 +229,14 @@ common("wrappers", {
             }
         }
     },
+
+    /**
+     * Properties of a google.protobuf.FloatValue message.
+     * @interface IFloatValue
+     * @type {Object}
+     * @property {number} [value]
+     * @memberof common
+     */
     FloatValue: {
         fields: {
             value: {
@@ -163,6 +245,14 @@ common("wrappers", {
             }
         }
     },
+
+    /**
+     * Properties of a google.protobuf.Int64Value message.
+     * @interface IInt64Value
+     * @type {Object}
+     * @property {number|Long} [value]
+     * @memberof common
+     */
     Int64Value: {
         fields: {
             value: {
@@ -171,6 +261,14 @@ common("wrappers", {
             }
         }
     },
+
+    /**
+     * Properties of a google.protobuf.UInt64Value message.
+     * @interface IUInt64Value
+     * @type {Object}
+     * @property {number|Long} [value]
+     * @memberof common
+     */
     UInt64Value: {
         fields: {
             value: {
@@ -179,6 +277,14 @@ common("wrappers", {
             }
         }
     },
+
+    /**
+     * Properties of a google.protobuf.Int32Value message.
+     * @interface IInt32Value
+     * @type {Object}
+     * @property {number} [value]
+     * @memberof common
+     */
     Int32Value: {
         fields: {
             value: {
@@ -187,6 +293,14 @@ common("wrappers", {
             }
         }
     },
+
+    /**
+     * Properties of a google.protobuf.UInt32Value message.
+     * @interface IUInt32Value
+     * @type {Object}
+     * @property {number} [value]
+     * @memberof common
+     */
     UInt32Value: {
         fields: {
             value: {
@@ -195,6 +309,14 @@ common("wrappers", {
             }
         }
     },
+
+    /**
+     * Properties of a google.protobuf.BoolValue message.
+     * @interface IBoolValue
+     * @type {Object}
+     * @property {boolean} [value]
+     * @memberof common
+     */
     BoolValue: {
         fields: {
             value: {
@@ -203,6 +325,14 @@ common("wrappers", {
             }
         }
     },
+
+    /**
+     * Properties of a google.protobuf.StringValue message.
+     * @interface IStringValue
+     * @type {Object}
+     * @property {string} [value]
+     * @memberof common
+     */
     StringValue: {
         fields: {
             value: {
@@ -211,6 +341,14 @@ common("wrappers", {
             }
         }
     },
+
+    /**
+     * Properties of a google.protobuf.BytesValue message.
+     * @interface IBytesValue
+     * @type {Object}
+     * @property {Uint8Array} [value]
+     * @memberof common
+     */
     BytesValue: {
         fields: {
             value: {
@@ -220,3 +358,21 @@ common("wrappers", {
         }
     }
 });
+
+/**
+ * Gets the root definition of the specified common proto file.
+ *
+ * Bundled definitions are:
+ * - google/protobuf/any.proto
+ * - google/protobuf/duration.proto
+ * - google/protobuf/empty.proto
+ * - google/protobuf/struct.proto
+ * - google/protobuf/timestamp.proto
+ * - google/protobuf/wrappers.proto
+ *
+ * @param {string} file Proto file name
+ * @returns {INamespace|null} Root definition or `null` if not defined
+ */
+common.get = function get(file) {
+    return common[file] || null;
+};

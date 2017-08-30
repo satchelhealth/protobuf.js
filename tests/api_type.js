@@ -3,13 +3,7 @@ var tape = require("tape");
 var protobuf = require("..");
 
 var def = {
-    fields: {},
-    oneofs: undefined,
-    extensions: undefined,
-    reserved: undefined,
-    group: undefined,
-    nested: undefined,
-    options: undefined,
+    fields: {}
 };
 
 var def2 = {
@@ -24,8 +18,8 @@ var def2 = {
             oneof: ["a"]
         }
     },
-    extensions: [1000, 2000],
-    reserved: [999],
+    extensions: [[1000, 2000]],
+    reserved: [[900, 999], "b"],
     nested: {
         Type: {
             values: { ONE: 1, TWO: 2 }
@@ -46,17 +40,16 @@ tape.test("reflected types", function(test) {
     type = protobuf.Type.fromJSON("Test", def2);
     test.same(JSON.parse(JSON.stringify(type)), JSON.parse(JSON.stringify(def2)), "should construct from and convert back to JSON (complex parsed)");
 
-    function MyMessage() {}
+    function MyMessageAuto() {}
+    type.ctor = MyMessageAuto;
+    test.ok(MyMessageAuto.prototype instanceof protobuf.Message, "should properly register a constructor through assignment");
+    test.ok(typeof MyMessageAuto.encode === "function", "should populate static methods on assigned constructors");
 
-    test.throws(function() {
-        type.ctor = MyMessage;
-    }, TypeError, "should throw when registering a constructor that doesn't extend Message");
-    
-    MyMessage.prototype = Object.create(protobuf.Message.prototype);
-
-    test.doesNotThrow(function() {
-        type.ctor = MyMessage;
-    }, "should not throw when registering a constructor that extends Message");
+    function MyMessageManual() {}
+    MyMessageManual.prototype = Object.create(protobuf.Message.prototype);
+    type.ctor = MyMessageManual;
+    test.ok(MyMessageManual.prototype instanceof protobuf.Message, "should properly register a constructor through assignment if already extending message");
+    test.ok(typeof MyMessageManual.encode === "function", "should populate static methods on assigned constructors");
 
     type = protobuf.Type.fromJSON("My", {
         fields: {
@@ -65,6 +58,7 @@ tape.test("reflected types", function(test) {
                 id: 1
             }
         },
+        reserved: [[900, 999], "b"],
         nested: {
             Type: { fields: {} },
             Enum: { values: {} },
@@ -75,20 +69,16 @@ tape.test("reflected types", function(test) {
     });
     test.same(type.toJSON(), {
         fields: {
-            a: { extend: undefined, id: 1, options: undefined, rule: undefined, type: "string" }
+            a: { id: 1, type: "string" }
         },
-        oneofs: undefined,
-        extensions: undefined,
-        reserved: undefined,
-        group: undefined,
+        reserved: [[900, 999], "b"],
         nested: {
-            Type: { extensions: undefined, fields: {}, group: undefined, nested: undefined, oneofs: undefined, options: undefined, reserved: undefined },
-            Enum: { options: undefined, values: {} },
-            Service: { methods: {}, nested: undefined, options: undefined },
-            extensionField: { extend: "Message", id: 1000, options: undefined, rule: undefined, type: "string" },
-            Other: { nested: undefined, options: undefined }
-        },
-        options: undefined
+            Type: { fields: {} },
+            Enum: { values: {} },
+            Service: { methods: {} },
+            extensionField: { extend: "Message", id: 1000, type: "string" },
+            Other: { }
+        }
     }, "should create from Field, Type, Enum, Service, extension Field and Namespace JSON");
 
     test.throws(function() {
@@ -98,6 +88,15 @@ tape.test("reflected types", function(test) {
     test.throws(function() {
         type.add(new protobuf.Field("c", 1, "uint32"));
     }, Error, "should throw when trying to add duplicate ids");
+
+    test.throws(function() {
+        type.add(new protobuf.Field("c", 900, "uint32"));
+    }, Error, "should throw when trying to add reserved ids");
+
+    test.throws(function() {
+        type.add(new protobuf.Field("b", 2, "uint32"));
+    }, Error, "should throw when trying to add reserved names");
+
 
     test.end();
 });

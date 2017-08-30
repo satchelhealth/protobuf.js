@@ -5,7 +5,8 @@ module.exports = OneOf;
 var ReflectionObject = require("./object");
 ((OneOf.prototype = Object.create(ReflectionObject.prototype)).constructor = OneOf).className = "OneOf";
 
-var Field = require("./field");
+var Field = require("./field"),
+    util  = require("./util");
 
 /**
  * Constructs a new oneof instance.
@@ -13,7 +14,7 @@ var Field = require("./field");
  * @extends ReflectionObject
  * @constructor
  * @param {string} name Oneof name
- * @param {string[]|Object} [fieldNames] Field names
+ * @param {string[]|Object.<string,*>} [fieldNames] Field names
  * @param {Object.<string,*>} [options] Declared options
  */
 function OneOf(name, fieldNames, options) {
@@ -23,7 +24,7 @@ function OneOf(name, fieldNames, options) {
     }
     ReflectionObject.call(this, name, options);
 
-    /* istanbul ignore next */
+    /* istanbul ignore if */
     if (!(fieldNames === undefined || Array.isArray(fieldNames)))
         throw TypeError("fieldNames must be an Array");
 
@@ -42,10 +43,17 @@ function OneOf(name, fieldNames, options) {
 }
 
 /**
- * Constructs a oneof from JSON.
+ * Oneof descriptor.
+ * @interface IOneOf
+ * @property {Array.<string>} oneof Oneof field names
+ * @property {Object.<string,*>} [options] Oneof options
+ */
+
+/**
+ * Constructs a oneof from a oneof descriptor.
  * @param {string} name Oneof name
- * @param {Object.<string,*>} json JSON object
- * @returns {MapField} Created oneof
+ * @param {IOneOf} json Oneof descriptor
+ * @returns {OneOf} Created oneof
  * @throws {TypeError} If arguments are invalid
  */
 OneOf.fromJSON = function fromJSON(name, json) {
@@ -53,13 +61,14 @@ OneOf.fromJSON = function fromJSON(name, json) {
 };
 
 /**
- * @override
+ * Converts this oneof to a oneof descriptor.
+ * @returns {IOneOf} Oneof descriptor
  */
 OneOf.prototype.toJSON = function toJSON() {
-    return {
-        oneof   : this.oneof,
-        options : this.options
-    };
+    return util.toObject([
+        "options" , this.options,
+        "oneof"   , this.oneof
+    ]);
 };
 
 /**
@@ -83,9 +92,10 @@ function addFieldsToParent(oneof) {
  */
 OneOf.prototype.add = function add(field) {
 
-    /* istanbul ignore next */
+    /* istanbul ignore if */
     if (!(field instanceof Field))
         throw TypeError("field must be a Field");
+
     if (field.parent && field.parent !== this.parent)
         field.parent.remove(field);
     this.oneof.push(field.name);
@@ -102,20 +112,23 @@ OneOf.prototype.add = function add(field) {
  */
 OneOf.prototype.remove = function remove(field) {
 
-    /* istanbul ignore next */
+    /* istanbul ignore if */
     if (!(field instanceof Field))
         throw TypeError("field must be a Field");
 
     var index = this.fieldsArray.indexOf(field);
-    /* istanbul ignore next */
+
+    /* istanbul ignore if */
     if (index < 0)
         throw Error(field + " is not a member of " + this);
 
     this.fieldsArray.splice(index, 1);
     index = this.oneof.indexOf(field.name);
+
     /* istanbul ignore else */
     if (index > -1) // theoretical
         this.oneof.splice(index, 1);
+
     field.partOf = null;
     return this;
 };
@@ -146,4 +159,35 @@ OneOf.prototype.onRemove = function onRemove(parent) {
         if ((field = this.fieldsArray[i]).parent)
             field.parent.remove(field);
     ReflectionObject.prototype.onRemove.call(this, parent);
+};
+
+/**
+ * Decorator function as returned by {@link OneOf.d} (TypeScript).
+ * @typedef OneOfDecorator
+ * @type {function}
+ * @param {Object} prototype Target prototype
+ * @param {string} oneofName OneOf name
+ * @returns {undefined}
+ */
+
+/**
+ * OneOf decorator (TypeScript).
+ * @function
+ * @param {...string} fieldNames Field names
+ * @returns {OneOfDecorator} Decorator function
+ * @template T extends string
+ */
+OneOf.d = function decorateOneOf() {
+    var fieldNames = new Array(arguments.length),
+        index = 0;
+    while (index < arguments.length)
+        fieldNames[index] = arguments[index++];
+    return function oneOfDecorator(prototype, oneofName) {
+        util.decorateType(prototype.constructor)
+            .add(new OneOf(oneofName, fieldNames));
+        Object.defineProperty(prototype, oneofName, {
+            get: util.oneOfGetter(fieldNames),
+            set: util.oneOfSetter(fieldNames)
+        });
+    };
 };

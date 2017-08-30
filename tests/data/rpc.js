@@ -6,9 +6,6 @@ var $protobuf = require("../../minimal");
 // Common aliases
 var $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
 
-// Lazily resolved type references
-var $lazyTypes = [];
-
 // Exported root namespace
 var $root = $protobuf.roots.test_rpc || ($protobuf.roots.test_rpc = {});
 
@@ -17,6 +14,7 @@ $root.MyService = (function() {
     /**
      * Constructs a new MyService service.
      * @exports MyService
+     * @classdesc Represents a MyService
      * @extends $protobuf.rpc.Service
      * @constructor
      * @param {$protobuf.RPCImpl} rpcImpl RPC implementation
@@ -31,6 +29,9 @@ $root.MyService = (function() {
 
     /**
      * Creates new MyService service using the specified rpc implementation.
+     * @function create
+     * @memberof MyService
+     * @static
      * @param {$protobuf.RPCImpl} rpcImpl RPC implementation
      * @param {boolean} [requestDelimited=false] Whether requests are length-delimited
      * @param {boolean} [responseDelimited=false] Whether responses are length-delimited
@@ -42,17 +43,22 @@ $root.MyService = (function() {
 
     /**
      * Callback as used by {@link MyService#myMethod}.
-     * @typedef MyService_myMethod_Callback
+     * @memberof MyService
+     * @typedef MyMethodCallback
      * @type {function}
-     * @param {?Error} error Error, if any
+     * @param {Error|null} error Error, if any
      * @param {MyResponse} [response] MyResponse
      */
 
     /**
      * Calls MyMethod.
-     * @param {MyRequest|Object} request MyRequest message or plain object
-     * @param {MyService_myMethod_Callback} callback Node-style callback called with the error, if any, and MyResponse
+     * @function .myMethod
+     * @memberof MyService
+     * @instance
+     * @param {IMyRequest} request MyRequest message or plain object
+     * @param {MyService.MyMethodCallback} callback Node-style callback called with the error, if any, and MyResponse
      * @returns {undefined}
+     * @variation 1
      */
     MyService.prototype.myMethod = function myMethod(request, callback) {
         return this.rpcCall(myMethod, $root.MyRequest, $root.MyResponse, request, callback);
@@ -60,9 +66,10 @@ $root.MyService = (function() {
 
     /**
      * Calls MyMethod.
-     * @name MyService#myMethod
-     * @function
-     * @param {MyRequest|Object} request MyRequest message or plain object
+     * @function myMethod
+     * @memberof MyService
+     * @instance
+     * @param {IMyRequest} request MyRequest message or plain object
      * @returns {Promise<MyResponse>} Promise
      * @variation 2
      */
@@ -73,26 +80,40 @@ $root.MyService = (function() {
 $root.MyRequest = (function() {
 
     /**
+     * Properties of a MyRequest.
+     * @exports IMyRequest
+     * @interface IMyRequest
+     * @property {string|null} [path] MyRequest path
+     */
+
+    /**
      * Constructs a new MyRequest.
      * @exports MyRequest
+     * @classdesc Represents a MyRequest.
      * @constructor
-     * @param {Object} [properties] Properties to set
+     * @param {IMyRequest=} [properties] Properties to set
      */
     function MyRequest(properties) {
         if (properties)
             for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                this[keys[i]] = properties[keys[i]];
+                if (properties[keys[i]] != null)
+                    this[keys[i]] = properties[keys[i]];
     }
 
     /**
      * MyRequest path.
-     * @type {string}
+     * @member {string} path
+     * @memberof MyRequest
+     * @instance
      */
     MyRequest.prototype.path = "";
 
     /**
      * Creates a new MyRequest instance using the specified properties.
-     * @param {Object} [properties] Properties to set
+     * @function create
+     * @memberof MyRequest
+     * @static
+     * @param {IMyRequest=} [properties] Properties to set
      * @returns {MyRequest} MyRequest instance
      */
     MyRequest.create = function create(properties) {
@@ -100,22 +121,28 @@ $root.MyRequest = (function() {
     };
 
     /**
-     * Encodes the specified MyRequest message.
-     * @param {MyRequest|Object} message MyRequest message or plain object to encode
+     * Encodes the specified MyRequest message. Does not implicitly {@link MyRequest.verify|verify} messages.
+     * @function encode
+     * @memberof MyRequest
+     * @static
+     * @param {IMyRequest} message MyRequest message or plain object to encode
      * @param {$protobuf.Writer} [writer] Writer to encode to
      * @returns {$protobuf.Writer} Writer
      */
     MyRequest.encode = function encode(message, writer) {
         if (!writer)
             writer = $Writer.create();
-        if (message.path !== undefined && message.hasOwnProperty("path"))
+        if (message.path != null && message.hasOwnProperty("path"))
             writer.uint32(/* id 1, wireType 2 =*/10).string(message.path);
         return writer;
     };
 
     /**
-     * Encodes the specified MyRequest message, length delimited.
-     * @param {MyRequest|Object} message MyRequest message or plain object to encode
+     * Encodes the specified MyRequest message, length delimited. Does not implicitly {@link MyRequest.verify|verify} messages.
+     * @function encodeDelimited
+     * @memberof MyRequest
+     * @static
+     * @param {IMyRequest} message MyRequest message or plain object to encode
      * @param {$protobuf.Writer} [writer] Writer to encode to
      * @returns {$protobuf.Writer} Writer
      */
@@ -125,9 +152,14 @@ $root.MyRequest = (function() {
 
     /**
      * Decodes a MyRequest message from the specified reader or buffer.
+     * @function decode
+     * @memberof MyRequest
+     * @static
      * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
      * @param {number} [length] Message length if known beforehand
      * @returns {MyRequest} MyRequest
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
      */
     MyRequest.decode = function decode(reader, length) {
         if (!(reader instanceof $Reader))
@@ -149,22 +181,32 @@ $root.MyRequest = (function() {
 
     /**
      * Decodes a MyRequest message from the specified reader or buffer, length delimited.
+     * @function decodeDelimited
+     * @memberof MyRequest
+     * @static
      * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
      * @returns {MyRequest} MyRequest
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
      */
     MyRequest.decodeDelimited = function decodeDelimited(reader) {
         if (!(reader instanceof $Reader))
-            reader = $Reader(reader);
+            reader = new $Reader(reader);
         return this.decode(reader, reader.uint32());
     };
 
     /**
      * Verifies a MyRequest message.
-     * @param {MyRequest|Object} message MyRequest message or plain object to verify
-     * @returns {?string} `null` if valid, otherwise the reason why it is not
+     * @function verify
+     * @memberof MyRequest
+     * @static
+     * @param {Object.<string,*>} message Plain object to verify
+     * @returns {string|null} `null` if valid, otherwise the reason why it is not
      */
     MyRequest.verify = function verify(message) {
-        if (message.path !== undefined)
+        if (typeof message !== "object" || message === null)
+            return "object expected";
+        if (message.path != null && message.hasOwnProperty("path"))
             if (!$util.isString(message.path))
                 return "path: string expected";
         return null;
@@ -172,6 +214,9 @@ $root.MyRequest = (function() {
 
     /**
      * Creates a MyRequest message from a plain object. Also converts values to their respective internal types.
+     * @function fromObject
+     * @memberof MyRequest
+     * @static
      * @param {Object.<string,*>} object Plain object
      * @returns {MyRequest} MyRequest
      */
@@ -179,24 +224,18 @@ $root.MyRequest = (function() {
         if (object instanceof $root.MyRequest)
             return object;
         var message = new $root.MyRequest();
-        if (object.path !== undefined && object.path !== null)
+        if (object.path != null)
             message.path = String(object.path);
         return message;
     };
 
     /**
-     * Creates a MyRequest message from a plain object. Also converts values to their respective internal types.
-     * This is an alias of {@link MyRequest.fromObject}.
-     * @function
-     * @param {Object.<string,*>} object Plain object
-     * @returns {MyRequest} MyRequest
-     */
-    MyRequest.from = MyRequest.fromObject;
-
-    /**
      * Creates a plain object from a MyRequest message. Also converts values to other types if specified.
+     * @function toObject
+     * @memberof MyRequest
+     * @static
      * @param {MyRequest} message MyRequest
-     * @param {$protobuf.ConversionOptions} [options] Conversion options
+     * @param {$protobuf.IConversionOptions} [options] Conversion options
      * @returns {Object.<string,*>} Plain object
      */
     MyRequest.toObject = function toObject(message, options) {
@@ -205,22 +244,16 @@ $root.MyRequest = (function() {
         var object = {};
         if (options.defaults)
             object.path = "";
-        if (message.path !== undefined && message.path !== null && message.hasOwnProperty("path"))
+        if (message.path != null && message.hasOwnProperty("path"))
             object.path = message.path;
         return object;
     };
 
     /**
-     * Creates a plain object from this MyRequest message. Also converts values to other types if specified.
-     * @param {$protobuf.ConversionOptions} [options] Conversion options
-     * @returns {Object.<string,*>} Plain object
-     */
-    MyRequest.prototype.toObject = function toObject(options) {
-        return this.constructor.toObject(this, options);
-    };
-
-    /**
      * Converts this MyRequest to JSON.
+     * @function toJSON
+     * @memberof MyRequest
+     * @instance
      * @returns {Object.<string,*>} JSON object
      */
     MyRequest.prototype.toJSON = function toJSON() {
@@ -233,26 +266,40 @@ $root.MyRequest = (function() {
 $root.MyResponse = (function() {
 
     /**
+     * Properties of a MyResponse.
+     * @exports IMyResponse
+     * @interface IMyResponse
+     * @property {number|null} [status] MyResponse status
+     */
+
+    /**
      * Constructs a new MyResponse.
      * @exports MyResponse
+     * @classdesc Represents a MyResponse.
      * @constructor
-     * @param {Object} [properties] Properties to set
+     * @param {IMyResponse=} [properties] Properties to set
      */
     function MyResponse(properties) {
         if (properties)
             for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                this[keys[i]] = properties[keys[i]];
+                if (properties[keys[i]] != null)
+                    this[keys[i]] = properties[keys[i]];
     }
 
     /**
      * MyResponse status.
-     * @type {number}
+     * @member {number} status
+     * @memberof MyResponse
+     * @instance
      */
     MyResponse.prototype.status = 0;
 
     /**
      * Creates a new MyResponse instance using the specified properties.
-     * @param {Object} [properties] Properties to set
+     * @function create
+     * @memberof MyResponse
+     * @static
+     * @param {IMyResponse=} [properties] Properties to set
      * @returns {MyResponse} MyResponse instance
      */
     MyResponse.create = function create(properties) {
@@ -260,22 +307,28 @@ $root.MyResponse = (function() {
     };
 
     /**
-     * Encodes the specified MyResponse message.
-     * @param {MyResponse|Object} message MyResponse message or plain object to encode
+     * Encodes the specified MyResponse message. Does not implicitly {@link MyResponse.verify|verify} messages.
+     * @function encode
+     * @memberof MyResponse
+     * @static
+     * @param {IMyResponse} message MyResponse message or plain object to encode
      * @param {$protobuf.Writer} [writer] Writer to encode to
      * @returns {$protobuf.Writer} Writer
      */
     MyResponse.encode = function encode(message, writer) {
         if (!writer)
             writer = $Writer.create();
-        if (message.status !== undefined && message.hasOwnProperty("status"))
+        if (message.status != null && message.hasOwnProperty("status"))
             writer.uint32(/* id 2, wireType 0 =*/16).int32(message.status);
         return writer;
     };
 
     /**
-     * Encodes the specified MyResponse message, length delimited.
-     * @param {MyResponse|Object} message MyResponse message or plain object to encode
+     * Encodes the specified MyResponse message, length delimited. Does not implicitly {@link MyResponse.verify|verify} messages.
+     * @function encodeDelimited
+     * @memberof MyResponse
+     * @static
+     * @param {IMyResponse} message MyResponse message or plain object to encode
      * @param {$protobuf.Writer} [writer] Writer to encode to
      * @returns {$protobuf.Writer} Writer
      */
@@ -285,9 +338,14 @@ $root.MyResponse = (function() {
 
     /**
      * Decodes a MyResponse message from the specified reader or buffer.
+     * @function decode
+     * @memberof MyResponse
+     * @static
      * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
      * @param {number} [length] Message length if known beforehand
      * @returns {MyResponse} MyResponse
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
      */
     MyResponse.decode = function decode(reader, length) {
         if (!(reader instanceof $Reader))
@@ -309,22 +367,32 @@ $root.MyResponse = (function() {
 
     /**
      * Decodes a MyResponse message from the specified reader or buffer, length delimited.
+     * @function decodeDelimited
+     * @memberof MyResponse
+     * @static
      * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
      * @returns {MyResponse} MyResponse
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
      */
     MyResponse.decodeDelimited = function decodeDelimited(reader) {
         if (!(reader instanceof $Reader))
-            reader = $Reader(reader);
+            reader = new $Reader(reader);
         return this.decode(reader, reader.uint32());
     };
 
     /**
      * Verifies a MyResponse message.
-     * @param {MyResponse|Object} message MyResponse message or plain object to verify
-     * @returns {?string} `null` if valid, otherwise the reason why it is not
+     * @function verify
+     * @memberof MyResponse
+     * @static
+     * @param {Object.<string,*>} message Plain object to verify
+     * @returns {string|null} `null` if valid, otherwise the reason why it is not
      */
     MyResponse.verify = function verify(message) {
-        if (message.status !== undefined)
+        if (typeof message !== "object" || message === null)
+            return "object expected";
+        if (message.status != null && message.hasOwnProperty("status"))
             if (!$util.isInteger(message.status))
                 return "status: integer expected";
         return null;
@@ -332,6 +400,9 @@ $root.MyResponse = (function() {
 
     /**
      * Creates a MyResponse message from a plain object. Also converts values to their respective internal types.
+     * @function fromObject
+     * @memberof MyResponse
+     * @static
      * @param {Object.<string,*>} object Plain object
      * @returns {MyResponse} MyResponse
      */
@@ -339,24 +410,18 @@ $root.MyResponse = (function() {
         if (object instanceof $root.MyResponse)
             return object;
         var message = new $root.MyResponse();
-        if (object.status !== undefined && object.status !== null)
+        if (object.status != null)
             message.status = object.status | 0;
         return message;
     };
 
     /**
-     * Creates a MyResponse message from a plain object. Also converts values to their respective internal types.
-     * This is an alias of {@link MyResponse.fromObject}.
-     * @function
-     * @param {Object.<string,*>} object Plain object
-     * @returns {MyResponse} MyResponse
-     */
-    MyResponse.from = MyResponse.fromObject;
-
-    /**
      * Creates a plain object from a MyResponse message. Also converts values to other types if specified.
+     * @function toObject
+     * @memberof MyResponse
+     * @static
      * @param {MyResponse} message MyResponse
-     * @param {$protobuf.ConversionOptions} [options] Conversion options
+     * @param {$protobuf.IConversionOptions} [options] Conversion options
      * @returns {Object.<string,*>} Plain object
      */
     MyResponse.toObject = function toObject(message, options) {
@@ -365,22 +430,16 @@ $root.MyResponse = (function() {
         var object = {};
         if (options.defaults)
             object.status = 0;
-        if (message.status !== undefined && message.status !== null && message.hasOwnProperty("status"))
+        if (message.status != null && message.hasOwnProperty("status"))
             object.status = message.status;
         return object;
     };
 
     /**
-     * Creates a plain object from this MyResponse message. Also converts values to other types if specified.
-     * @param {$protobuf.ConversionOptions} [options] Conversion options
-     * @returns {Object.<string,*>} Plain object
-     */
-    MyResponse.prototype.toObject = function toObject(options) {
-        return this.constructor.toObject(this, options);
-    };
-
-    /**
      * Converts this MyResponse to JSON.
+     * @function toJSON
+     * @memberof MyResponse
+     * @instance
      * @returns {Object.<string,*>} JSON object
      */
     MyResponse.prototype.toJSON = function toJSON() {
@@ -389,8 +448,5 @@ $root.MyResponse = (function() {
 
     return MyResponse;
 })();
-
-// Resolve lazy type references to actual types
-$util.lazyResolve($root, $lazyTypes);
 
 module.exports = $root;

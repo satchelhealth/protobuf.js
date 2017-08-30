@@ -1,12 +1,12 @@
 "use strict";
 var path     = require("path"),
     fs       = require("fs"),
-    pkg      = require(path.join(__dirname, "..", "package.json")),
+    pkg      = require("./package.json"),
     util     = require("./util");
 
 util.setup();
 
-var protobuf = require(".."),
+var protobuf = require(util.pathToProtobufJs),
     minimist = require("minimist"),
     chalk    = require("chalk"),
     glob     = require("glob");
@@ -16,34 +16,42 @@ var targets  = util.requireAll("./targets");
 /**
  * Runs pbjs programmatically.
  * @param {string[]} args Command line arguments
- * @param {function(?Error)} [callback] Optional completion callback
+ * @param {function(?Error, string=)} [callback] Optional completion callback
  * @returns {number|undefined} Exit code, if known
  */
-exports.main = function(args, callback) {
+exports.main = function main(args, callback) {
     var lintDefault = "eslint-disable block-scoped-var, no-redeclare, no-control-regex, no-prototype-builtins";
     var argv = minimist(args, {
         alias: {
-            target : "t",
-            out    : "o",
-            path   : "p",
-            wrap   : "w",
-            root   : "r",
-            lint   : "l"
+            target: "t",
+            out: "o",
+            path: "p",
+            wrap: "w",
+            root: "r",
+            lint: "l",
+            // backward compatibility:
+            "force-long": "strict-long",
+            "force-message": "strict-message"
         },
-        string: [ "target", "out", "path", "wrap", "root", "lint" ],
-        boolean: [ "keep-case", "create", "encode", "decode", "verify", "convert", "delimited", "beautify", "comments", "es6", "sparse" ],
+        string: [ "target", "out", "path", "wrap", "dependency", "root", "lint" ],
+        boolean: [ "create", "encode", "decode", "verify", "convert", "delimited", "beautify", "comments", "es6", "sparse", "keep-case", "force-long", "force-number", "force-enum-string", "force-message" ],
         default: {
-            target    : "json",
-            create    : true,
-            encode    : true,
-            decode    : true,
-            verify    : true,
-            convert   : true,
-            delimited : true,
-            beautify  : true,
-            comments  : true,
-            es6       : null,
-            lint      : lintDefault
+            target: "json",
+            create: true,
+            encode: true,
+            decode: true,
+            verify: true,
+            convert: true,
+            delimited: true,
+            beautify: true,
+            comments: true,
+            es6: null,
+            lint: lintDefault,
+            "keep-case": false,
+            "force-long": false,
+            "force-number": false,
+            "force-enum-string": false,
+            "force-message": false
         }
     });
 
@@ -51,67 +59,85 @@ exports.main = function(args, callback) {
         files  = argv._,
         paths  = typeof argv.path === "string" ? [ argv.path ] : argv.path || [];
 
+    // alias hyphen args in camel case
+    Object.keys(argv).forEach(function(key) {
+        var camelKey = key.replace(/-([a-z])/g, function($0, $1) { return $1.toUpperCase(); });
+        if (camelKey !== key)
+            argv[camelKey] = argv[key];
+    });
+
     // protobuf.js package directory contains additional, otherwise non-bundled google types
     paths.push(path.relative(process.cwd(), path.join(__dirname, "..")) || ".");
 
     if (!files.length) {
         var descs = Object.keys(targets).filter(function(key) { return !targets[key].private; }).map(function(key) {
-            return "                  " + util.pad(key, 14, true) + targets[key].description;
+            return "                   " + util.pad(key, 14, true) + targets[key].description;
         });
         if (callback)
-            callback(Error("usage"));
+            callback(Error("usage")); // eslint-disable-line callback-return
         else
-            console.error([
+            process.stderr.write([
                 "protobuf.js v" + pkg.version + " CLI for JavaScript",
                 "",
-                chalk.bold.white("Consolidates imports and converts between file formats."),
+                chalk.bold.white("Translates between file formats and generates static code."),
                 "",
-                "  -t, --target    Specifies the target format. Also accepts a path to require a custom target.",
+                "  -t, --target     Specifies the target format. Also accepts a path to require a custom target.",
                 "",
-                descs.join('\n'),
+                descs.join("\n"),
                 "",
-                "  -p, --path      Adds a directory to the include path.",
+                "  -p, --path       Adds a directory to the include path.",
                 "",
-                "  -o, --out       Saves to a file instead of writing to stdout.",
+                "  -o, --out        Saves to a file instead of writing to stdout.",
                 "",
-                "  --sparse        Exports only those types referenced from a main file (experimental).",
+                "  --sparse         Exports only those types referenced from a main file (experimental).",
                 "",
                 chalk.bold.gray("  Module targets only:"),
                 "",
-                "  -w, --wrap      Specifies the wrapper to use. Also accepts a path to require a custom wrapper.",
+                "  -w, --wrap       Specifies the wrapper to use. Also accepts a path to require a custom wrapper.",
                 "",
-                "                  default   Default wrapper supporting both CommonJS and AMD",
-                "                  commonjs  CommonJS wrapper",
-                "                  amd       AMD wrapper",
-                "                  es6       ES6 wrapper (implies --es6)",
+                "                   default   Default wrapper supporting both CommonJS and AMD",
+                "                   commonjs  CommonJS wrapper",
+                "                   amd       AMD wrapper",
+                "                   es6       ES6 wrapper (implies --es6)",
+                "                   closure   A closure adding to protobuf.roots where protobuf is a global",
                 "",
-                "  -r, --root      Specifies an alternative protobuf.roots name.",
+                "  --dependency     Specifies which version of protobuf to require. Accepts any valid module id",
                 "",
-                "  -l, --lint      Linter configuration. Defaults to protobuf.js-compatible rules:",
+                "  -r, --root       Specifies an alternative protobuf.roots name.",
                 "",
-                "                  " + lintDefault,
+                "  -l, --lint       Linter configuration. Defaults to protobuf.js-compatible rules:",
                 "",
-                "  --es6           Enables ES6 syntax (const/let instead of var)",
+                "                   " + lintDefault,
+                "",
+                "  --es6            Enables ES6 syntax (const/let instead of var)",
                 "",
                 chalk.bold.gray("  Proto sources only:"),
                 "",
-                "  --keep-case     Keeps field casing instead of converting to camel case.",
+                "  --keep-case      Keeps field casing instead of converting to camel case.",
                 "",
                 chalk.bold.gray("  Static targets only:"),
                 "",
-                "  --no-create     Does not generate create functions used for reflection compatibility.",
-                "  --no-encode     Does not generate encode functions.",
-                "  --no-decode     Does not generate decode functions.",
-                "  --no-verify     Does not generate verify functions.",
-                "  --no-convert    Does not generate convert functions like from/toObject",
-                "  --no-delimited  Does not generate delimited encode/decode functions.",
-                "  --no-beautify   Does not beautify generated code.",
-                "  --no-comments   Does not output any JSDoc comments.",
+                "  --no-create      Does not generate create functions used for reflection compatibility.",
+                "  --no-encode      Does not generate encode functions.",
+                "  --no-decode      Does not generate decode functions.",
+                "  --no-verify      Does not generate verify functions.",
+                "  --no-convert     Does not generate convert functions like from/toObject",
+                "  --no-delimited   Does not generate delimited encode/decode functions.",
+                "  --no-beautify    Does not beautify generated code.",
+                "  --no-comments    Does not output any JSDoc comments.",
                 "",
-                "usage: " + chalk.bold.green("pbjs") + " [options] file1.proto file2.json ..." + chalk.gray("  (or)  ") + "other | " + chalk.bold.green("pbjs") + " [options] -"
+                "  --force-long     Enfores the use of 'Long' for s-/u-/int64 and s-/fixed64 fields.",
+                "  --force-number   Enfores the use of 'number' for s-/u-/int64 and s-/fixed64 fields.",
+                "  --force-message  Enfores the use of message instances instead of plain objects.",
+                "",
+                "usage: " + chalk.bold.green("pbjs") + " [options] file1.proto file2.json ..." + chalk.gray("  (or pipe)  ") + "other | " + chalk.bold.green("pbjs") + " [options] -",
+                ""
             ].join("\n"));
         return 1;
     }
+
+    if (typeof argv["strict-long"] === "boolean")
+        argv["force-long"] = argv["strict-long"];
 
     // Resolve glob expressions
     for (var i = 0; i < files.length;) {
@@ -159,8 +185,10 @@ exports.main = function(args, callback) {
     };
 
     // Use es6 syntax if not explicitly specified on the command line and the es6 wrapper is used
-    if (argv.wrap === "es6" && argv.es6 === null)
+    if (argv.wrap === "es6" || argv.es6) {
+        argv.wrap = "es6";
         argv.es6 = true;
+    }
 
     var parseOptions = {
         "keepCase": argv["keep-case"] || false
@@ -184,8 +212,10 @@ exports.main = function(args, callback) {
                 }
                 callTarget();
             } catch (err) {
-                if (callback)
-                    return callback(err);
+                if (callback) {
+                    callback(err);
+                    return;
+                }
                 throw err;
             }
         });
@@ -269,15 +299,21 @@ exports.main = function(args, callback) {
                     return callback(err);
                 throw err;
             }
-            if (output !== "") {
+            try {
                 if (argv.out)
                     fs.writeFileSync(argv.out, output, { encoding: "utf8" });
-                else
+                else if (!callback)
                     process.stdout.write(output, "utf8");
+                return callback
+                    ? callback(null, output)
+                    : undefined;
+            } catch (err) {
+                if (callback)
+                    return callback(err);
+                throw err;
             }
-            return callback 
-                ? callback(null)
-                : undefined;
         });
     }
+
+    return undefined;
 };

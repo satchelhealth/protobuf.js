@@ -24,7 +24,7 @@ function underScore(str) {
 var out = [];
 var indent = 0;
 var first = false;
-var syntax = 3; 
+var syntax = 3;
 
 function proto_target(root, options, callback) {
     if (options) {
@@ -46,9 +46,9 @@ function proto_target(root, options, callback) {
     first = false;
     try {
         buildRoot(root);
-        callback(null, out.join('\n'));
+        return callback(null, out.join("\n"));
     } catch (err) {
-        callback(err);
+        return callback(err);
     } finally {
         out = [];
         syntax = 3;
@@ -57,26 +57,30 @@ function proto_target(root, options, callback) {
 
 function push(line) {
     if (line === "")
-        return out.push("");
-    var ind = "";
-    for (var i = 0; i < indent; ++i)
-        ind += "    ";
-    out.push(ind + line);
+        out.push("");
+    else {
+        var ind = "";
+        for (var i = 0; i < indent; ++i)
+            ind += "    ";
+        out.push(ind + line);
+    }
 }
 
 function escape(str) {
-    return str.replace(/[\\"']/g, '\\$&')
-              .replace(/\u0000/g, '\\0');
+    return str.replace(/[\\"']/g, "\\$&")
+              .replace(/\r/g, "\\r")
+              .replace(/\n/g, "\\n")
+              .replace(/\u0000/g, "\\0");
 }
 
 function value(v) {
     switch (typeof v) {
-        case 'boolean':
-            return v ? 'true' : 'false';
-        case 'number':
+        case "boolean":
+            return v ? "true" : "false";
+        case "number":
             return v.toString();
         default:
-            return '"' + escape(v + '') + '"';
+            return "\"" + escape(String(v)) + "\"";
     }
 }
 
@@ -84,6 +88,7 @@ function buildRoot(root) {
     root.resolveAll();
     var pkg = [];
     var ptr = root;
+    var repeat = true;
     do {
         var nested = ptr.nestedArray;
         if (nested.length === 1 && nested[0] instanceof Namespace && !(nested[0] instanceof Type || nested[0] instanceof Service)) {
@@ -91,9 +96,9 @@ function buildRoot(root) {
             if (ptr !== root)
                 pkg.push(ptr.name);
         } else
-            break;
-    } while (true);
-    out.push('syntax = "proto' + syntax + '";');
+            repeat = false;
+    } while (repeat);
+    out.push("syntax = \"proto" + syntax + "\";");
     if (pkg.length)
         out.push("", "package " + pkg.join(".") + ";");
 
@@ -147,13 +152,17 @@ function buildEnum(enm) {
 
 function buildRanges(keyword, ranges) {
     if (ranges && ranges.length) {
-        push("");
+        var parts = [];
         ranges.forEach(function(range) {
-            if (range[0] === range[1])
-                push(keyword + " " + range[0] + ";");
+            if (typeof range === "string")
+                parts.push("\"" + escape(range) + "\"");
+            else if (range[0] === range[1])
+                parts.push(range[0]);
             else
-                push(keyword + " " + range[0] + " to " + (range[1] === 0x1FFFFFFF ? "max" : range[1]) + ";");
+                parts.push(range[0] + " to " + (range[1] === 0x1FFFFFFF ? "max" : range[1]));
         });
+        push("");
+        push(keyword + " " + parts.join(", ") + ";");
     }
 }
 
@@ -175,10 +184,12 @@ function buildType(type) {
 }
 
 function buildField(field, passExtend) {
-    if (field.partOf || field.declaringField || (field.extend !== undefined && !passExtend))
+    if (field.partOf || field.declaringField || field.extend !== undefined && !passExtend)
         return;
-    if (first)
-        first = false, push("");
+    if (first) {
+        first = false;
+        push("");
+    }
     if (field.resolvedType && field.resolvedType.group) {
         buildGroup(field);
         return;
@@ -216,14 +227,14 @@ function buildFieldOptions(field) {
     if (!field.options || !(keys = Object.keys(field.options)).length)
         return null;
     var sb = [];
-    Object.keys(field.options).forEach(function(key) {
+    keys.forEach(function(key) {
         var val = field.options[key];
-        var wireType = types.packed[field.resolvedType instanceof Enum ? "uint32" : field.type];
+        var wireType = types.packed[field.resolvedType instanceof Enum ? "int32" : field.type];
         switch (key) {
             case "packed":
                 val = Boolean(val);
                 // skip when not packable or syntax default
-                if (wireType === undefined || (syntax === 3) === val)
+                if (wireType === undefined || syntax === 3 === val)
                     return;
                 break;
             case "default":
@@ -274,8 +285,10 @@ function buildOneOf(oneof) {
     ++indent; first = true;
     oneof.oneof.forEach(function(fieldName) {
         var field = oneof.parent.get(fieldName);
-        if (first)
-            push(""), first = false;
+        if (first) {
+            first = false;
+            push("");
+        }
         var opts = buildFieldOptions(field);
         push(field.type + " " + underScore(field.name) + " = " + field.id + (opts ? " " + opts : "") + ";");
     });
@@ -298,11 +311,13 @@ function buildMethod(method) {
 
 function buildOptions(object) {
     if (!object.options)
-        return
+        return;
     first = true;
     Object.keys(object.options).forEach(function(key) {
-        if (first)
-            push(""), first = false;
+        if (first) {
+            first = false;
+            push("");
+        }
         var val = object.options[key];
         push("option " + key + " = " + JSON.stringify(val) + ";");
     });

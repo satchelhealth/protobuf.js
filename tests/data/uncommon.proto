@@ -21,6 +21,16 @@ message Test2 {
     /** pre */
     map<string,string> ambiguousComments = 7; /// post
 
+    string str = 8 {
+        option default = "a";
+    }
+
+    map<string,string> strmap = 9 {
+        option (custom) = "";
+    };
+
+    map<uint64,Test> longmap = 10;
+
     /** pre */
     oneof kind;
     oneof kind2; /// post
@@ -43,11 +53,21 @@ enum Test4{
     option (custom).foo = "";
     ONE = 1 [foo="bar"];
     TWO = 2 [(my_options) = { a: "foo" b { c: "bar" } }];
+    THREE = 3 {
+        option (custom).bar = "";
+    };
 };
+
+enum Test4_1{
+    OPTION = 1;
+}
 
 service Test5;
 
 service Test6 { option (custom).bar = "";
+    message DoSomethingRequest;
+    message DoSomethingResponse;
+
     rpc DoSomething(stream DoSomethingRequest) returns (stream DoSomethingResponse){ option (custom).foo2 = ""; };
     /** pre */
     rpc DoSomethingElse(   stream DoSomethingRequest  ) returns (DoSomethingResponse); /// post

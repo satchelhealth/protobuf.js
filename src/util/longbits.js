@@ -4,37 +4,29 @@ module.exports = LongBits;
 var util = require("../util/minimal");
 
 /**
- * Any compatible Long instance.
- * 
- * This is a minimal stand-alone definition of a Long instance. The actual type is that exported by long.js.
- * @typedef Long
- * @type {Object}
- * @property {number} low Low bits
- * @property {number} high High bits
- * @property {boolean} unsigned Whether unsigned or not
- */
-
-/**
  * Constructs new long bits.
  * @classdesc Helper class for working with the low and high bits of a 64 bit value.
  * @memberof util
  * @constructor
- * @param {number} lo Low bits
- * @param {number} hi High bits
+ * @param {number} lo Low 32 bits, unsigned
+ * @param {number} hi High 32 bits, unsigned
  */
-function LongBits(lo, hi) { // make sure to always call this with unsigned 32bits for proper optimization
+function LongBits(lo, hi) {
+
+    // note that the casts below are theoretically unnecessary as of today, but older statically
+    // generated converter code might still call the ctor with signed 32bits. kept for compat.
 
     /**
      * Low bits.
      * @type {number}
      */
-    this.lo = lo;
+    this.lo = lo >>> 0;
 
     /**
      * High bits.
      * @type {number}
      */
-    this.hi = hi;
+    this.hi = hi >>> 0;
 }
 
 /**
@@ -67,7 +59,7 @@ LongBits.fromNumber = function fromNumber(value) {
     if (sign)
         value = -value;
     var lo = value >>> 0,
-        hi = (value - lo) / 4294967296 >>> 0; 
+        hi = (value - lo) / 4294967296 >>> 0;
     if (sign) {
         hi = ~hi >>> 0;
         lo = ~lo >>> 0;

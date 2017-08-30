@@ -9,6 +9,9 @@ tape.test("reflected enums", function(test) {
         b: 2
     });
 
+    var enm_allow_alias = new protobuf.Enum( 'AliasTest',
+    { a: 0 }, { allow_alias: true } );
+
     test.throws(function() {
         new protobuf.Enum("Test", true);
     }, TypeError, "should throw if values is specified but not an object");
@@ -32,7 +35,7 @@ tape.test("reflected enums", function(test) {
 
     test.throws(function() {
         enm.add("c", 2);
-    }, Error, "should throw if id is a duplicate");
+    }, Error, "should throw if id is a duplicate, without allow_alias option");
 
     enm.add("c", 3);
     test.same(enm.values, {
@@ -65,12 +68,17 @@ tape.test("reflected enums", function(test) {
     }, "should no longer expose any removed values by id");
 
     test.same(enm.toJSON(), {
-        options: undefined,
         values: {
             a: 1,
             c: 3
         }
-    }, "should export options and values to JSON");
+    }, "should export values to JSON");
+
+    enm_allow_alias.add( 'b', 0 );
+    test.same( enm_allow_alias.values, {
+      a: 0,
+      b: 0
+    });
 
     test.end();
 });

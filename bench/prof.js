@@ -21,7 +21,7 @@ if (process.execArgv.indexOf("--prof") < 0) {
             fs.unlink(file);
     });
     process.stdout.write("generating profile (may take a while) ...\n");
-    child_process.execSync("node --prof --trace-deopt " + process.execArgv.join(" ") + " " + process.argv.slice(1).join(' '), {
+    child_process.execSync("node --prof --trace-deopt " + process.execArgv.join(" ") + " " + process.argv.slice(1).join(" "), {
         cwd: process.cwd(),
         stdio: "inherit"
     });
@@ -60,10 +60,10 @@ if (process.argv[2] === "fromjson") {
 var Test, data, count;
 
 if (process.argv.indexOf("--alt") < 0) {
-    root = protobuf.parse(fs.readFileSync(require.resolve("../bench/bench.proto")).toString("utf8")).root;
+    root = protobuf.parse(fs.readFileSync(require.resolve("../bench/data/bench.proto")).toString("utf8")).root;
     Test = root.lookup("Test");
     json = JSON.stringify(root);
-    data = require("../bench/bench.json");
+    data = require("../bench/data/bench.json");
     count = 10000000;
     process.stdout.write("bench.proto");
 } else {
