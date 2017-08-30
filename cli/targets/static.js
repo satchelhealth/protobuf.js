@@ -632,22 +632,22 @@ function buildServer(ref, service) {
       "@constructor",
       "@param {$protobuf.RPCServerImpl} rpcServerImpl RPC implementation",
   ]);
-  push("function " + name(service.name) + "Server(rpcServerImpl) {");
+  push("function " + escapeName(service.name) + "Server(rpcServerImpl) {");
   ++indent;
   push("$protobuf.rpc.Server.call(this, rpcServerImpl);");
   --indent;
   push("}");
   push("");
-  push("(" + name(service.name) + "Server.prototype = Object.create($protobuf.rpc.Server.prototype)).constructor = " + name(service.name) + "Server;");
+  push("(" + escapeName(service.name) + "Server.prototype = Object.create($protobuf.rpc.Server.prototype)).constructor = " + escapeName(service.name) + "Server;");
 
   if (config.create) {
       push("");
       pushComment([
           "Creates new " + service.name + "Server server using the specified rpc implementation.",
           "@param {$protobuf.RPCImpl} rpcServerImpl RPC implementation",
-          "@returns {" + name(service.name) + "Server} RPC server."
+          "@returns {" + escapeName(service.name) + "Server} RPC server."
       ]);
-      push(name(service.name) + "Server.create = function create(rpcServerImpl) {");
+      push(escapeName(service.name) + "Server.create = function create(rpcServerImpl) {");
           ++indent;
           push("return new this(rpcServerImpl);");
           --indent;
@@ -658,9 +658,9 @@ function buildServer(ref, service) {
       method.resolve();
       var mName = method.name;
       push("");
-      var cbName = name(service.name) + "Server_" + name(mName) + "_Callback";
+      var cbName = escapeName(service.name) + "Server_" + escapeName(mName) + "_Callback";
       pushComment([
-          "Callback as used by {@link " + name(service.name) + "Server#" + name(mName) + "}.",
+          "Callback as used by {@link " + escapeName(service.name) + "Server#" + escapeName(mName) + "}.",
           // This is a more specialized version of protobuf.rpc.ServiceCallback
           "@typedef " + cbName,
           "@type {function}",
@@ -675,16 +675,16 @@ function buildServer(ref, service) {
           "@param {" + cbName + "} callback Node-style callback called with the error, if any, and " + method.resolvedResponseType.name,
           "@returns {undefined}"
       ]);
-      push(name(service.name) + "Server.prototype" + util.safeProp(mName) + " = function " + name(mName) + "(ctx, request, callback) {");
+      push(escapeName(service.name) + "Server.prototype" + util.safeProp(mName) + " = function " + escapeName(mName) + "(ctx, request, callback) {");
           ++indent;
-          push("return this.rpcCall({ctx: ctx, method: \"" + name(method.name) + "\"}, $root" + method.resolvedRequestType.fullName + ", $root" + method.resolvedResponseType.fullName + ", request, callback);");
+          push("return this.rpcCall({ctx: ctx, method: \"" + escapeName(method.name) + "\"}, $root" + method.resolvedRequestType.fullName + ", $root" + method.resolvedResponseType.fullName + ", request, callback);");
           --indent;
       push("};");
       if (config.comments)
           push("");
       pushComment([
           method.comment || "Calls " + method.name + ".",
-          "@name " + name(service.name) + "Server#" + mName,
+          "@name " + escapeName(service.name) + "Server#" + mName,
           "@function",
           "@param {Object} ctx Object containing request-scoped data",
           "@param {" + method.resolvedRequestType.fullName.substring(1) + "|Object} request " + method.resolvedRequestType.name + " message or plain object",
@@ -741,7 +741,7 @@ function buildClient(ref, service) {
         var lcName = protobuf.util.lcFirst(method.name),
             cbName = escapeName(method.name + "Callback");
         push("");
-        var cbName = name(service.name) + "Client_" + name(lcName) + "_Callback";
+        var cbName = escapeName(service.name) + "Client_" + escapeName(lcName) + "_Callback";
         pushComment([
             "Callback as used by {@link " + exportName(service) + "Client#" + escapeName(lcName) + "}.",
             // This is a more specialized version of protobuf.rpc.ServiceCallback
