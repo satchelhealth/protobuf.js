@@ -764,8 +764,8 @@ function buildClient(ref, service) {
         ]);
         push(escapeName(service.name) + "Client.prototype" + util.safeProp(lcName) + " = function " + escapeName(lcName) + "(request, callback) {");
             ++indent;
-            // push("return this.rpcCall(\"" + name(method.name) + "\", $root" + method.resolvedRequestType.fullName + ", $root" + method.resolvedResponseType.fullName + ", request, callback);");
-            push("return this.rpcCall(\"" + escapeName(lcName) + "\", $root." + exportName(method.resolvedRequestType) + ", $root." + exportName(method.resolvedResponseType) + ", request, callback);");
+            push("return this.rpcCall(\"" + name(method.name) + "\", $root" + method.resolvedRequestType.fullName + ", $root" + method.resolvedResponseType.fullName + ", request, callback);");
+            //push("return this.rpcCall(\"" + escapeName(lcName) + "\", $root." + exportName(method.resolvedRequestType) + ", $root." + exportName(method.resolvedResponseType) + ", request, callback);");
             --indent;
         push("};");
         if (config.comments)
