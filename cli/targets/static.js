@@ -157,7 +157,7 @@ function buildService(ref, ns, buildAsServer) {
     var serviceType = buildAsServer ? "Server" : "Client";
 
     push("");
-    push(name(ref) + "." + name(ns.name) + serviceType + " = (function() {");
+    push(escapeName(ref) + "." + escapeName(ns.name) + serviceType + " = (function() {");
     ++indent;
 
         if(buildAsServer){
@@ -175,7 +175,7 @@ function buildService(ref, ns, buildAsServer) {
         });
 
         push("");
-        push("return " + name(ns.name) + serviceType + ";");
+        push("return " + escapeName(ns.name) + serviceType + ";");
     --indent;
     push("})();");
 }
