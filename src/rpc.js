@@ -34,3 +34,4 @@ var rpc = exports;
  */
 
 rpc.Service = require("./rpc/service");
+rpc.Server = require("./rpc/server");

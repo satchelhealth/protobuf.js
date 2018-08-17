@@ -1174,10 +1174,10 @@ export class Reader {
     /**
      * Creates a new reader using the specified buffer.
      * @function
-     * @param {Uint8Array} buffer Buffer to read from
-     * @returns {BufferReader|Reader} A {@link BufferReader} if `buffer` is a Buffer, otherwise a {@link Reader}
+     * @param {Uint8Array|Buffer} buffer Buffer to read from
+     * @returns {Reader|BufferReader} A {@link BufferReader} if `buffer` is a Buffer, otherwise a {@link Reader}
      */
-    static create(buffer: Uint8Array): (BufferReader|Reader);
+    static create(buffer: (Uint8Array|Buffer)): (Reader|BufferReader);
 
     /**
      * Reads a varint as an unsigned 32 bit value.
@@ -1314,6 +1314,21 @@ export class BufferReader extends Reader {
      * @param {Buffer} buffer Buffer to read from
      */
     constructor(buffer: Buffer);
+
+    /**
+     * Read buffer.
+     * @name BufferReader#buf
+     * @type {Buffer}
+     */
+    buf: Buffer;
+
+    /**
+     * Reads a sequence of bytes preceeded by its length as a varint.
+     * @name BufferReader#bytes
+     * @function
+     * @returns {Buffer} Value read
+     */
+    bytes(): Buffer;
 }
 
 /**
@@ -1360,7 +1375,7 @@ export class Root extends NamespaceBase {
      * @function
      * @param {string} origin The file name of the importing file
      * @param {string} target The file name being imported
-     * @returns {string} Resolved path to `target`
+     * @returns {?string} Resolved path to `target` or `null` to skip the file
      */
     resolvePath(origin: string, target: string): string;
 
@@ -1798,7 +1813,6 @@ export class Type extends NamespaceBase {
  * @property {boolean} [arrays=false] Sets empty arrays for missing repeated fields even if `defaults=false`
  * @property {boolean} [objects=false] Sets empty objects for missing map fields even if `defaults=false`
  */
-
 interface ConversionOptions {
     longs?: any;
     enums?: any;
@@ -1982,7 +1996,6 @@ export namespace types {
  * @property {number} high High bits
  * @property {boolean} unsigned Whether unsigned or not
  */
-
 interface Long {
     low: number;
     high: number;
@@ -2152,9 +2165,9 @@ export namespace util {
     /**
      * Creates a new buffer of whatever type supported by the environment.
      * @param {number|number[]} [sizeOrArray=0] Buffer size or number array
-     * @returns {Uint8Array} Buffer
+     * @returns {Uint8Array|Buffer} Buffer
      */
-    function newBuffer(sizeOrArray?: (number|number[])): Uint8Array;
+    function newBuffer(sizeOrArray?: (number|number[])): (Uint8Array|Buffer);
 
     /**
      * Array implementation used in the browser. `Uint8Array` if supported, otherwise `Array`.
@@ -2222,7 +2235,7 @@ export namespace util {
     function lazyResolve(root: Root, lazyTypes: { [k: number]: (string|ReflectionObject) }): void;
 
     /**
-     * Default conversion options used for toJSON implementations.
+     * Default conversion options used for toJSON implementations. Converts longs, enums and bytes to strings.
      * @type {ConversionOptions}
      */
     var toJSONOptions: ConversionOptions;
@@ -2363,11 +2376,34 @@ export namespace util {
     /**
      * Fetches the contents of a file.
      * @memberof util
-     * @param {string} path File path or url
-     * @param {FetchCallback} [callback] Callback function
-     * @returns {Promise<string>|undefined} A Promise if `callback` has been omitted
+     * @param {string} filename File path or url
+     * @param {FetchOptions} options Fetch options
+     * @param {FetchCallback} callback Callback function
+     * @returns {undefined}
      */
-    function fetch(path: string, callback?: FetchCallback): (Promise<string>|undefined);
+    function fetch(filename: string, options: FetchOptions, callback: FetchCallback): void;
+
+    /**
+     * Fetches the contents of a file.
+     * @name util.fetch
+     * @function
+     * @param {string} path File path or url
+     * @param {FetchCallback} callback Callback function
+     * @returns {undefined}
+     * @variation 2
+     */
+    function fetch(path: string, callback: FetchCallback): void;
+
+    /**
+     * Fetches the contents of a file.
+     * @name util.fetch
+     * @function
+     * @param {string} path File path or url
+     * @param {FetchOptions} [options] Fetch options
+     * @returns {Promise<string|Uint8Array>} Promise
+     * @variation 3
+     */
+    function fetch(path: string, options?: FetchOptions): Promise<(string|Uint8Array)>;
 
     /**
      * Requires a module only if available.
@@ -2680,9 +2716,17 @@ export class BufferWriter extends Writer {
     /**
      * Allocates a buffer of the specified size.
      * @param {number} size Buffer size
-     * @returns {Uint8Array} Buffer
+     * @returns {Buffer} Buffer
      */
-    static alloc(size: number): Uint8Array;
+    static alloc(size: number): Buffer;
+
+    /**
+     * Finishes the write operation.
+     * @name BufferWriter#finish
+     * @function
+     * @returns {Buffer} Finished buffer
+     */
+    finish(): Buffer;
 }
 
 /**
@@ -2706,6 +2750,18 @@ type Codegen = (format: string, ...args: any[]) => Codegen;
  * @returns {undefined}
  */
 type FetchCallback = (error: Error, contents?: string) => void;
+
+/**
+ * Options as used by {@link util.fetch}.
+ * @typedef FetchOptions
+ * @type {Object}
+ * @property {boolean} [binary=false] Whether expecting a binary response
+ * @property {boolean} [xhr=false] If `true`, forces the use of XMLHttpRequest
+ */
+interface FetchOptions {
+    binary?: boolean;
+    xhr?: boolean;
+}
 
 /**
  * An allocator as used by {@link util.pool}.

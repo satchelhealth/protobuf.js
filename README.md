@@ -3,24 +3,16 @@
 
 **Protocol Buffers** are a language-neutral, platform-neutral, extensible way of serializing structured data for use in communications protocols, data storage, and more, originally designed at Google ([see](https://developers.google.com/protocol-buffers/)).
 
-**protobuf.js** is a pure JavaScript implementation with TypeScript support for node and the browser. It's super easy to use, blazingly fast and works out of the box on .proto files!
-
-**Recommended read:** [Changes in protobuf.js 6.0](https://github.com/dcodeIO/protobuf.js/wiki/Changes-in-protobuf.js-6.0)
-
-Features
---------
-* Optimized [for performance](#performance)
-* Excellent [browser support](#compatibility)
-* Managed [TypeScript definitions](#usage-with-typescript)
-* Elaborate [API documentation](#documentation)
-* Convenient [CLI utilities](#command-line)
-* Seamless [browserify integration](#browserify-integration)
+**protobuf.js** is a pure JavaScript implementation with [TypeScript](https://www.typescriptlang.org) support for [node.js](https://nodejs.org) and the browser. It's super easy to use, blazingly fast and works out of the box with [.proto](https://developers.google.com/protocol-buffers/docs/proto) files!
 
 Contents
 --------
 
 * [Usage](#usage)<br />
   How to include protobuf.js in your project.
+
+* [Distributions](#distributions)<br />
+  A brief introduction to the available distributions and their use cases.
 
 * [Examples](#examples)<br />
   A few examples to get you started.
@@ -67,22 +59,37 @@ Production:
 
 **NOTE:** Remember to replace the version tag with the exact [release](https://github.com/dcodeIO/protobuf.js/tags) your project depends upon.
 
-Or [download](https://github.com/dcodeIO/protobuf.js/tree/master/dist) the library.
-
 The `protobuf` namespace will always be available globally / also supports AMD loaders.
 
-Additionally, the library is compiled in different versions. Which one to use depends on whether size is a factor and your use case:
+Distributions
+-------------
 
-| Build   | Downloads                    | How to require                  | Description
-|---------|------------------------------|---------------------------------|-------------
-| full    | [dist][dist-full]            | `require("protobufjs")`         | All features. Works with everything.
-| light   | [dist/light][dist-light]     | `require("protobufjs/light")`   | All features except tokenizer, parser and bundled common types. Works with reflection, JSON definitions and static code.
-| minimal | [dist/minimal][dist-minimal] | `require("protobufjs/minimal")` | Just enough to run statically generated code. Works with static code only.
+The library supports both reflection-based and code-based use cases:
+
+1. Parsing protocol buffer definitions (.proto files) to reflection
+2. Loading JSON descriptors to reflection
+3. Generating static code without any reflection features
+
+There is a suitable distribution for each of these:
+
+|         | Gzipped | Downloads                    | How to require                  | Description
+|---------|---------|------------------------------|---------------------------------|-------------
+| full    | 18.5kb  | [dist][dist-full]            | `require("protobufjs")`         | All features. Works with everything.
+| light   | 15.5kb  | [dist/light][dist-light]     | `require("protobufjs/light")`   | All features except tokenizer, parser and bundled common types. Works with JSON definitions, pure reflection and static code.
+| minimal | 6.0kb+  | [dist/minimal][dist-minimal] | `require("protobufjs/minimal")` | Just enough to run static code. No reflection.
+
+In case of doubt you can just use the full library.
+
+[dist-full]: https://github.com/dcodeIO/protobuf.js/tree/master/dist
+[dist-light]: https://github.com/dcodeIO/protobuf.js/tree/master/dist/light
+[dist-minimal]: https://github.com/dcodeIO/protobuf.js/tree/master/dist/minimal
 
 Examples
 --------
 
 ### Using .proto files
+
+It's possible to load existing .proto files using the full library, which parses and compiles the definitions to ready to use (reflection-based) message classes:
 
 ```protobuf
 // awesome.proto
@@ -104,7 +111,7 @@ protobuf.load("awesome.proto", function(err, root) {
     // Create a new message
     var message = AwesomeMessage.create({ awesomeField: "AwesomeString" });
 
-    // Encode a message
+    // Encode a message to an Uint8Array (browser) or Buffer (node)
     var buffer = AwesomeMessage.encode(message).finish();
     // ... do something with buffer
 
@@ -112,7 +119,7 @@ protobuf.load("awesome.proto", function(err, root) {
     var buffer = AwesomeMessage.encode({ awesomeField: "AwesomeString" }).finish();
     // ... do something with buffer
 
-    // Decode a buffer
+    // Decode an Uint8Array (browser) or Buffer (node) to a message
     var message = AwesomeMessage.decode(buffer);
     // ... do something with message
 
@@ -129,7 +136,51 @@ protobuf.load("awesome.proto")
     });
 ```
 
+### Using JSON descriptors
+
+The library utilizes a JSON format that is equivalent to a .proto definition (see also: [Command line usage](#command-line)).
+
+The following is identical to the .proto definition seen above, but it can also be used with just the light library because it doesn't require the parser:
+
+```json
+// awesome.json
+{
+  "nested": {
+    "AwesomeMessage": {
+      "fields": {
+        "awesomeField": {
+          "type": "string",
+          "id": 1
+        }
+      }
+    }
+  }
+}
+```
+
+A JSON descriptor can either be loaded the usual way:
+
+```js
+protobuf.load("awesome.json", function(err, root) {
+    if (err) throw err;
+
+    // Continue at "Obtain a message type" above
+});
+```
+
+Or you can load it inline:
+
+```js
+var jsonDescriptor = require("./awesome.json"); // exemplary for node
+
+var root = protobuf.Root.fromJSON(jsonDescriptor);
+
+// Continue at "Obtain a message type" above
+```
+
 ### Using reflection only
+
+Both the full and the light library include full reflection support. You could, for example, define the .proto definitions seen in the examples above using just reflection:
 
 ```js
 ...
@@ -145,30 +196,54 @@ var root = new Root().define("awesomepackage").add(AwesomeMessage);
 ...
 ```
 
+Detailed information on the reflection structure is available within the [documentation](#documentation).
+
 ### Using custom classes
+
+You can also extend runtime message classes with your own custom functionality by registering your own class with a reflected message type:
 
 ```js
 ...
 
+// Define your own prototypal class
 function AwesomeMessage(properties) {
-    protobuf.Message.call(this, properties);
+    protobuf.Message.call(this, properties); // call the super constructor
 }
+
+// Register your custom class with its reflected type (*)
 protobuf.Class.create(root.lookup("awesomepackage.AwesomeMessage") /* or use reflection */, AwesomeMessage);
 
-var message = new AwesomeMessage({ awesomeField: "AwesomeString" });
+// Define your custom functionality
+AwesomeMessage.customStaticMethod = function() { ... };
+AwesomeMessage.prototype.customInstanceMethod = function() { ... };
 
-// Continue at "Encode a message" above
+// Continue at "Create a message" above (you can also use the constructor directly)
 ```
 
-Custom classes are automatically populated with static `encode`, `encodeDelimited`, `decode`, `decodeDelimited` and `verify` methods and reference their reflected type via the `$type` property. Note that there are no methods (just `$type`) on instances by default as method names might conflict with field names.
+Afterwards, decoded messages of this type are `instanceof AwesomeMessage`.
 
-### Using the Reader/Writer interface directly
+(*) Besides referencing its reflected type through `AwesomeMessage.$type` and `AwesomeMesage#$type`, the respective custom class is automatically populated with:
 
-While only useful for the adventurous cherishing an aversion to [generated static code](https://github.com/dcodeIO/protobuf.js#command-line), it's also possible to use the Reader/Writer interface directly depending just on the [minimal library][dist-minimal] ([basic example](https://github.com/dcodeIO/protobuf.js/blob/master/examples/reader-writer.js)).
-
-Easy ways to obtain example code snippets are either setting `protobuf.util.codegen.verbose = true` while watching the magic as it happens, or simply inspecting generated static code.
+* `AwesomeMessage.create`
+* `AwesomeMessage.encode` and `AwesomeMessage.encodeDelimited`
+* `AwesomeMessage.decode` and `AwesomeMessage.decodeDelimited`
+* `AwesomeMessage.verify`
+* `AwesomeMessage.fromObject`, `AwesomeMessage.toObject`, `AwesomeMessage#toObject` and `AwesomeMessage#toJSON`
 
 ### Using services
+
+The library also supports services but it doesn't make any assumptions about the actual transport channel. Instead, a user must provide a suitable RPC implementation, which is an asynchronous function that takes the reflected service method, the binary request and a node-style callback as its parameters:
+
+```js
+function rpcImpl(method, requestData, callback) {
+    // perform the request using an HTTP request or a WebSocket for example
+    var responseData = ...;
+    // and call the callback with the binary response afterwards:
+    callback(null, responseData);
+}
+```
+
+Example:
 
 ```protobuf
 // greeter.proto
@@ -190,50 +265,81 @@ message HelloReply {
 ```js
 ...
 var Greeter = root.lookup("Greeter");
-var greeter = Greeter.create(rpcImpl, false, false); // rpcImpl (see below), requestDelimited?, responseDelimited?
+var greeter = Greeter.create(/* see above */ rpcImpl, /* request delimited? */ false, /* response delimited? */ false);
 
 greeter.sayHello({ name: 'you' }, function(err, response) {
     console.log('Greeting:', response.message);
 });
 ```
 
-To make this work, all you have to do is provide an `rpcImpl`, which is an asynchronous function that takes the reflected service method, the binary HelloRequest and a node-style callback as its parameters. For example:
+Services also support promises:
 
 ```js
-function rpcImpl(method, requestData, callback) {
-    // perform the request using an HTTP request or a WebSocket for example
-    var responseData = ...;
-    // and call the callback with the binary response afterwards:
-    callback(null, responseData);
-}
+greeter.sayHello({ name: 'you' })
+    .then(function(response) {
+        console.log('Greeting:', response.message);
+    });
 ```
 
 There is also an [example for streaming RPC](https://github.com/dcodeIO/protobuf.js/blob/master/examples/streaming-rpc.js).
 
 ### Usage with TypeScript
 
+The library ships with its own [type definitions](https://github.com/dcodeIO/protobuf.js/blob/master/index.d.ts) and modern editors like [Visual Studio Code](https://code.visualstudio.com/) should automatically detect and use them for code completion when following this pattern:
+
 ```ts
+// node.js
 import * as protobuf from "protobufjs";
 import * as Long from "long"; // optional
-...
+
+// browser only (alternatively)
+import * as protobuf from "./node_modules/protobufjs/index.js";
+import * as Long from "./node_modules/long/dist/long.js"; // optional
+
+protobuf.load("awesome.proto", function(err, root) {
+  if (err)
+    throw err;
+
+  // example code
+  var AwesomeMessage = root.lookupType("AwesomeMessage");
+  var message = AwesomeMessage.create({ awesomeField: "hello" });
+  var buffer = AwesomeMessage.encode(message).finish();
+  ...
+});
 ```
 
-See also: [Generating your own TypeScript definitions](https://github.com/dcodeIO/protobuf.js#generating-typescript-definitions-from-static-modules)
+To achieve the same with static code generated by [pbjs](#command-line), there is the [pbts](#generating-typescript-definitions-from-static-modules) command line utility to generate type definitions from static code as well.
 
-Additional configuration might be necessary when not utilizing node, i.e. reference [protobuf.js.d.ts](https://github.com/dcodeIO/protobuf.js/blob/master/index.d.ts) and [long.js.d.ts](https://github.com/DefinitelyTyped/DefinitelyTyped/blob/types-2.0/long/index.d.ts).
+Let's say you generated your static code to `bundle.js` and its type definitions to `bundle.d.ts`, then you can do:
+
+```ts
+import * as root from "./bundle.js";
+
+// example code
+var AwesomeMessage = root.AwesomeMessage;
+var message = AwesomeMessage.create({ awesomeField: "hello" });
+var buffer = AwesomeMessage.encode(message).finish();
+...
+```
 
 Documentation
 -------------
 
+#### Protocol Buffers
 * [Google's Developer Guide](https://developers.google.com/protocol-buffers/docs/overview)
-* [protobuf.js API Documentation](http://dcode.io/protobuf.js/) and [CHANGELOG](https://github.com/dcodeIO/protobuf.js/blob/master/CHANGELOG.md)
+
+#### protobuf.js
+* [API Documentation](http://dcode.io/protobuf.js)
+* [CHANGELOG](https://github.com/dcodeIO/protobuf.js/blob/master/CHANGELOG.md)
 * [Frequently asked questions](https://github.com/dcodeIO/protobuf.js/wiki) on our wiki
-* [More questions and answers](http://stackoverflow.com/questions/tagged/protobuf.js) on StackOverflow
+
+#### Community
+* [Questions and answers](http://stackoverflow.com/questions/tagged/protobuf.js) on StackOverflow
 
 Command line
 ------------
 
-The `pbjs` command line utility can be used to bundle and translate between .proto and .json files.
+The `pbjs` command line utility can be used to bundle and translate between .proto and .json files. It also generates static code.
 
 ```
 Consolidates imports and converts between file formats.
@@ -258,13 +364,15 @@ Consolidates imports and converts between file formats.
                   default   Default wrapper supporting both CommonJS and AMD
                   commonjs  CommonJS wrapper
                   amd       AMD wrapper
-                  es6       ES6 wrapper
+                  es6       ES6 wrapper (implies --es6)
 
   -r, --root      Specifies an alternative protobuf.roots name.
 
   -l, --lint      Linter configuration. Defaults to protobuf.js-compatible rules:
 
-                  eslint-disable block-scoped-var, no-redeclare, no-control-regex
+                  eslint-disable block-scoped-var, no-redeclare, no-control-regex, no-prototype-builtins
+
+  --es6           Enables ES6 syntax (const/let instead of var)
 
   Proto sources only:
 
@@ -284,7 +392,7 @@ Consolidates imports and converts between file formats.
 usage: pbjs [options] file1.proto file2.json ...  (or)  other | pbjs [options] -
 ```
 
-For production environments it is recommended to bundle all your .proto files to a single .json file, which reduces the number of network requests and parser invocations required:
+For production environments it is recommended to bundle all your .proto files to a single .json file, which minimizes the number of network requests and avoids any parser overhead (hint: works with just the [light library](#distributions)):
 
 ```
 $> pbjs -t json file1.proto file2.proto > bundle.json
@@ -304,13 +412,13 @@ protobuf.load("bundle.json", function(err, root) {
 });
 ```
 
-As you might have noticed, `pbjs` is also capable of generating static code. For example
+The `pbjs` utility is also capable of generating static code (hint: works with just the [minimal library](#distributions)). For example
 
 ```
 $> pbjs -t static-module -w commonjs -o compiled.js file1.proto file2.proto
 ```
 
-will generate static code for definitions within `file1.proto` and `file2.proto` to a CommonJS module `compiled.js`, which then can be used with just the [minimal library][dist-minimal].
+will generate static code for definitions within `file1.proto` and `file2.proto` to a CommonJS module `compiled.js`.
 
 **ProTip!** Documenting your .proto files with `/** ... */`-blocks or (trailing) `/// ...` lines translates to generated static code.
 
@@ -321,15 +429,17 @@ Likewise, the `pbts` command line utility can be used to generate TypeScript def
 ```
 Generates TypeScript definitions from annotated JavaScript files.
 
-  -n, --name      Wraps everything in a module of the specified name.
-
   -o, --out       Saves to a file instead of writing to stdout.
-
-  -m, --main      Whether building the main library without any imports.
 
   -g, --global    Name of the global object in browser environments, if any.
 
   --no-comments   Does not output any JSDoc comments.
+
+  Internal flags:
+
+  -n, --name      Wraps everything in a module of the specified name.
+
+  -m, --main      Whether building the main library without any imports.
 
 usage: pbts [options] file1.js file2.js ...  (or)  other | pbts [options] -
 ```
@@ -341,7 +451,7 @@ $> pbjs -t static-module -w commonjs -o compiled.js file1.proto file2.proto
 $> pbts -o compiled.d.ts compiled.js
 ```
 
-Additionally, TypeScript definitions of static modules are compatible with reflection, as long as the following conditions are met:
+Additionally, TypeScript definitions of static modules are compatible with their reflection-based counterparts (i.e. as exported by JSON modules), as long as the following conditions are met:
 
 1. Instead of using `new SomeMessage(...)`, always use `SomeMessage.create(...)` because reflection objects do not provide a constructor.
 2. Types, services and enums must start with an uppercase letter to become available as properties of the reflected types as well (i.e. to be able to use `MyMessage.MyEnum` instead of `root.lookup("MyMessage.MyEnum")`).
@@ -355,9 +465,9 @@ $> pbjs -t static-module file1.proto file2.proto | pbts -o bundle.d.ts -
 
 ### On reflection vs. static code
 
-While using .proto files directly requires the [full library][dist-full] (about 18.5kb gzipped) respectively pure reflection/JSON the [light library][dist-light] (about 15.5kb gzipped), pretty much all code but the relatively short descriptors is shared.
+While using .proto files directly requires the full library respectively pure reflection/JSON the light library, pretty much all code but the relatively short descriptors is shared.
 
-Static code, on the other hand, requires just the [minimal library][dist-minimal] (about 6kb gzipped), but generates additional, albeit editable, source code without any reflection features.
+Static code, on the other hand, requires just the minimal library, but generates additional, albeit editable, source code without any reflection features.
 
 There is no significant difference performance-wise as the code generated statically is pretty much the same as generated at runtime and both are largely interchangeable as seen in the previous section.
 
@@ -490,11 +600,17 @@ $> npm run types
 
 By default, protobuf.js integrates into your browserify build-process without requiring any optional modules. Hence:
 
-* If you need int64 support, explicitly require the `long` module somewhere in your project. It will be excluded otherwise.
-* If you have any special requirements, there is [the bundler](https://github.com/dcodeIO/protobuf.js/blob/master/scripts/bundle.js) as a reference.
+* If you need int64 support, explicitly require the `long` module somewhere in your project as it will be excluded otherwise. This assumes that a global `require` function is present that protobuf.js can call to obtain the long module.
+
+  If there is no global `require` function present after bundling, it's also possible to assign the long module programmatically:
+
+  ```js
+  var Long = ...;
+  
+  protobuf.util.Long = Long;
+  protobuf.configure();
+  ```
+
+* If you have any special requirements, there is [the bundler](https://github.com/dcodeIO/protobuf.js/blob/master/scripts/bundle.js) for reference.
 
 **License:** [BSD 3-Clause License](https://opensource.org/licenses/BSD-3-Clause)
-
-[dist-full]: https://github.com/dcodeIO/protobuf.js/tree/master/dist
-[dist-light]: https://github.com/dcodeIO/protobuf.js/tree/master/dist/light
-[dist-minimal]: https://github.com/dcodeIO/protobuf.js/tree/master/dist/minimal

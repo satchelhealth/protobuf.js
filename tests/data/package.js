@@ -4,9 +4,7 @@
 var $protobuf = require("../../minimal");
 
 // Common aliases
-var $Reader = $protobuf.Reader,
-    $Writer = $protobuf.Writer,
-    $util   = $protobuf.util;
+var $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
 
 // Lazily resolved type references
 var $lazyTypes = [];
@@ -171,7 +169,7 @@ $root.Package = (function() {
             writer.uint32(/* id 4, wireType 2 =*/34).string(message.author);
         if (message.license !== undefined && message.hasOwnProperty("license"))
             writer.uint32(/* id 5, wireType 2 =*/42).string(message.license);
-        if (message.repository !== undefined && message.hasOwnProperty("repository"))
+        if (message.repository && message.hasOwnProperty("repository"))
             $types[6].encode(message.repository, writer.uint32(/* id 6, wireType 2 =*/50).fork()).ldelim();
         if (message.bugs !== undefined && message.hasOwnProperty("bugs"))
             writer.uint32(/* id 7, wireType 2 =*/58).string(message.bugs);
@@ -381,7 +379,7 @@ $root.Package = (function() {
             var key = Object.keys(message.bin);
             for (var i = 0; i < key.length; ++i)
                 if (!$util.isString(message.bin[key[i]]))
-                    return "bin: string{key:string} expected";
+                    return "bin: string{k:string} expected";
         }
         if (message.scripts !== undefined) {
             if (!$util.isObject(message.scripts))
@@ -389,7 +387,7 @@ $root.Package = (function() {
             var key = Object.keys(message.scripts);
             for (var i = 0; i < key.length; ++i)
                 if (!$util.isString(message.scripts[key[i]]))
-                    return "scripts: string{key:string} expected";
+                    return "scripts: string{k:string} expected";
         }
         if (message.dependencies !== undefined) {
             if (!$util.isObject(message.dependencies))
@@ -397,7 +395,7 @@ $root.Package = (function() {
             var key = Object.keys(message.dependencies);
             for (var i = 0; i < key.length; ++i)
                 if (!$util.isString(message.dependencies[key[i]]))
-                    return "dependencies: string{key:string} expected";
+                    return "dependencies: string{k:string} expected";
         }
         if (message.optionalDependencies !== undefined) {
             if (!$util.isObject(message.optionalDependencies))
@@ -405,7 +403,7 @@ $root.Package = (function() {
             var key = Object.keys(message.optionalDependencies);
             for (var i = 0; i < key.length; ++i)
                 if (!$util.isString(message.optionalDependencies[key[i]]))
-                    return "optionalDependencies: string{key:string} expected";
+                    return "optionalDependencies: string{k:string} expected";
         }
         if (message.devDependencies !== undefined) {
             if (!$util.isObject(message.devDependencies))
@@ -413,7 +411,7 @@ $root.Package = (function() {
             var key = Object.keys(message.devDependencies);
             for (var i = 0; i < key.length; ++i)
                 if (!$util.isString(message.devDependencies[key[i]]))
-                    return "devDependencies: string{key:string} expected";
+                    return "devDependencies: string{k:string} expected";
         }
         if (message.types !== undefined)
             if (!$util.isString(message.types))

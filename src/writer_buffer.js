@@ -22,10 +22,10 @@ function BufferWriter() {
 /**
  * Allocates a buffer of the specified size.
  * @param {number} size Buffer size
- * @returns {Uint8Array} Buffer
+ * @returns {Buffer} Buffer
  */
 BufferWriter.alloc = function alloc_buffer(size) {
-    return (BufferWriter.alloc = Buffer.allocUnsafe)(size);
+    return (BufferWriter.alloc = util._Buffer_allocUnsafe)(size);
 };
 
 var writeBytesBuffer = Buffer && Buffer.prototype instanceof Uint8Array && Buffer.prototype.set.name === "set"
@@ -46,7 +46,7 @@ var writeBytesBuffer = Buffer && Buffer.prototype instanceof Uint8Array && Buffe
  */
 BufferWriter.prototype.bytes = function write_bytes_buffer(value) {
     if (util.isString(value))
-        value = Buffer.from(value, "base64"); // polyfilled
+        value = util._Buffer_from(value, "base64");
     var len = value.length >>> 0;
     this.uint32(len);
     if (len)
@@ -71,3 +71,11 @@ BufferWriter.prototype.string = function write_string_buffer(value) {
         this.push(writeStringBuffer, len, value);
     return this;
 };
+
+
+/**
+ * Finishes the write operation.
+ * @name BufferWriter#finish
+ * @function
+ * @returns {Buffer} Finished buffer
+ */

@@ -4,9 +4,7 @@
 var $protobuf = require("../../minimal");
 
 // Common aliases
-var $Reader = $protobuf.Reader,
-    $Writer = $protobuf.Writer,
-    $util   = $protobuf.util;
+var $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
 
 // Lazily resolved type references
 var $lazyTypes = [];
@@ -177,8 +175,7 @@ $root.jspb = (function() {
          * @property {number} BAR=2 BAR value
          */
         test.OuterEnum = (function() {
-            var valuesById = {},
-                values = Object.create(valuesById);
+            var valuesById = {}, values = Object.create(valuesById);
             values[valuesById[1] = "FOO"] = 1;
             values[valuesById[2] = "BAR"] = 2;
             return values;
@@ -1052,7 +1049,7 @@ $root.jspb = (function() {
                 if (message.aString !== undefined && message.hasOwnProperty("aString"))
                     writer.uint32(/* id 1, wireType 2 =*/10).string(message.aString);
                 writer.uint32(/* id 2, wireType 0 =*/16).bool(message.aBool);
-                if (message.aNestedMessage !== undefined && message.hasOwnProperty("aNestedMessage"))
+                if (message.aNestedMessage && message.hasOwnProperty("aNestedMessage"))
                     $types[2].encode(message.aNestedMessage, writer.uint32(/* id 3, wireType 2 =*/26).fork()).ldelim();
                 if (message.aRepeatedMessage !== undefined && message.hasOwnProperty("aRepeatedMessage"))
                     for (var i = 0; i < message.aRepeatedMessage.length; ++i)
@@ -1530,9 +1527,9 @@ $root.jspb = (function() {
                     writer.uint32(/* id 2, wireType 2 =*/18).string(message.str2);
                 if (message.str3 !== undefined && message.hasOwnProperty("str3"))
                     writer.uint32(/* id 3, wireType 2 =*/26).string(message.str3);
-                if (message[".jspb.test.IsExtension.extField"] !== undefined && message.hasOwnProperty(".jspb.test.IsExtension.extField"))
+                if (message[".jspb.test.IsExtension.extField"] && message.hasOwnProperty(".jspb.test.IsExtension.extField"))
                     $types[3].encode(message[".jspb.test.IsExtension.extField"], writer.uint32(/* id 100, wireType 2 =*/802).fork()).ldelim();
-                if (message[".jspb.test.IndirectExtension.simple"] !== undefined && message.hasOwnProperty(".jspb.test.IndirectExtension.simple"))
+                if (message[".jspb.test.IndirectExtension.simple"] && message.hasOwnProperty(".jspb.test.IndirectExtension.simple"))
                     $types[4].encode(message[".jspb.test.IndirectExtension.simple"], writer.uint32(/* id 101, wireType 2 =*/810).fork()).ldelim();
                 if (message[".jspb.test.IndirectExtension.str"] !== undefined && message.hasOwnProperty(".jspb.test.IndirectExtension.str"))
                     writer.uint32(/* id 102, wireType 2 =*/818).string(message[".jspb.test.IndirectExtension.str"]);
@@ -1542,7 +1539,7 @@ $root.jspb = (function() {
                 if (message[".jspb.test.IndirectExtension.repeatedSimple"] !== undefined && message.hasOwnProperty(".jspb.test.IndirectExtension.repeatedSimple"))
                     for (var i = 0; i < message[".jspb.test.IndirectExtension.repeatedSimple"].length; ++i)
                         $types[7].encode(message[".jspb.test.IndirectExtension.repeatedSimple"][i], writer.uint32(/* id 104, wireType 2 =*/834).fork()).ldelim();
-                if (message[".jspb.test.simple1"] !== undefined && message.hasOwnProperty(".jspb.test.simple1"))
+                if (message[".jspb.test.simple1"] && message.hasOwnProperty(".jspb.test.simple1"))
                     $types[8].encode(message[".jspb.test.simple1"], writer.uint32(/* id 105, wireType 2 =*/842).fork()).ldelim();
                 return writer;
             };
@@ -1873,7 +1870,7 @@ $root.jspb = (function() {
                     writer = $Writer.create();
                 writer.uint32(/* id 1, wireType 2 =*/10).string(message.aString);
                 writer.uint32(/* id 9, wireType 0 =*/72).bool(message.anOutOfOrderBool);
-                if (message.aNestedMessage !== undefined && message.hasOwnProperty("aNestedMessage"))
+                if (message.aNestedMessage && message.hasOwnProperty("aNestedMessage"))
                     $types[2].encode(message.aNestedMessage, writer.uint32(/* id 4, wireType 2 =*/34).fork()).ldelim();
                 if (message.aRepeatedMessage !== undefined && message.hasOwnProperty("aRepeatedMessage"))
                     for (var i = 0; i < message.aRepeatedMessage.length; ++i)
@@ -3135,8 +3132,7 @@ $root.jspb = (function() {
              * @property {number} E2=77 E2 value
              */
             DefaultValues.Enum = (function() {
-                var valuesById = {},
-                    values = Object.create(valuesById);
+                var valuesById = {}, values = Object.create(valuesById);
                 values[valuesById[13] = "E1"] = 13;
                 values[valuesById[77] = "E2"] = 77;
                 return values;
@@ -3555,7 +3551,7 @@ $root.jspb = (function() {
                     writer = $Writer.create();
                 if (message.str !== undefined && message.hasOwnProperty("str"))
                     writer.uint32(/* id 1, wireType 2 =*/10).string(message.str);
-                if (message.simple1 !== undefined && message.hasOwnProperty("simple1"))
+                if (message.simple1 && message.hasOwnProperty("simple1"))
                     $types[1].encode(message.simple1, writer.uint32(/* id 3, wireType 2 =*/26).fork()).ldelim();
                 if (message.simple2 !== undefined && message.hasOwnProperty("simple2"))
                     for (var i = 0; i < message.simple2.length; ++i)
@@ -3564,7 +3560,7 @@ $root.jspb = (function() {
                     writer.uint32(/* id 6, wireType 2 =*/50).bytes(message.bytesField);
                 if (message.unused !== undefined && message.hasOwnProperty("unused"))
                     writer.uint32(/* id 7, wireType 2 =*/58).string(message.unused);
-                if (message[".jspb.test.CloneExtension.extField"] !== undefined && message.hasOwnProperty(".jspb.test.CloneExtension.extField"))
+                if (message[".jspb.test.CloneExtension.extField"] && message.hasOwnProperty(".jspb.test.CloneExtension.extField"))
                     $types[5].encode(message[".jspb.test.CloneExtension.extField"], writer.uint32(/* id 100, wireType 2 =*/802).fork()).ldelim();
                 return writer;
             };
@@ -4016,12 +4012,12 @@ $root.jspb = (function() {
                     for (var i = 0; i < message.repeatedGroup.length; ++i)
                         $types[0].encode(message.repeatedGroup[i], writer.uint32(/* id 1, wireType 3 =*/11)).uint32(/* id 1, wireType 4 =*/12);
                 $types[1].encode(message.requiredGroup, writer.uint32(/* id 2, wireType 3 =*/19)).uint32(/* id 2, wireType 4 =*/20);
-                if (message.optionalGroup !== undefined && message.hasOwnProperty("optionalGroup"))
+                if (message.optionalGroup && message.hasOwnProperty("optionalGroup"))
                     $types[2].encode(message.optionalGroup, writer.uint32(/* id 3, wireType 3 =*/27)).uint32(/* id 3, wireType 4 =*/28);
                 if (message.id !== undefined && message.hasOwnProperty("id"))
                     writer.uint32(/* id 4, wireType 2 =*/34).string(message.id);
                 $types[4].encode(message.requiredSimple, writer.uint32(/* id 5, wireType 2 =*/42).fork()).ldelim();
-                if (message.optionalSimple !== undefined && message.hasOwnProperty("optionalSimple"))
+                if (message.optionalSimple && message.hasOwnProperty("optionalSimple"))
                     $types[5].encode(message.optionalSimple, writer.uint32(/* id 6, wireType 2 =*/50).fork()).ldelim();
                 return writer;
             };
@@ -4798,7 +4794,7 @@ $root.jspb = (function() {
             TestGroup1.encode = function encode(message, writer) {
                 if (!writer)
                     writer = $Writer.create();
-                if (message.group !== undefined && message.hasOwnProperty("group"))
+                if (message.group && message.hasOwnProperty("group"))
                     $types[0].encode(message.group, writer.uint32(/* id 1, wireType 3 =*/11)).uint32(/* id 1, wireType 4 =*/12);
                 return writer;
             };
@@ -5986,7 +5982,7 @@ $root.jspb = (function() {
                 if (message.mapBoolString && message.hasOwnProperty("mapBoolString"))
                     for (var keys = Object.keys(message.mapBoolString), i = 0; i < keys.length; ++i)
                         writer.uint32(/* id 10, wireType 2 =*/82).fork().uint32(/* id 1, wireType 0 =*/8).bool(keys[i]).uint32(/* id 2, wireType 2 =*/18).string(message.mapBoolString[keys[i]]).ldelim();
-                if (message.testMapFields !== undefined && message.hasOwnProperty("testMapFields"))
+                if (message.testMapFields && message.hasOwnProperty("testMapFields"))
                     $types[10].encode(message.testMapFields, writer.uint32(/* id 11, wireType 2 =*/90).fork()).ldelim();
                 if (message.mapStringTestmapfields && message.hasOwnProperty("mapStringTestmapfields"))
                     for (var keys = Object.keys(message.mapStringTestmapfields), i = 0; i < keys.length; ++i) {
@@ -6141,7 +6137,7 @@ $root.jspb = (function() {
                     var key = Object.keys(message.mapStringString);
                     for (var i = 0; i < key.length; ++i)
                         if (!$util.isString(message.mapStringString[key[i]]))
-                            return "mapStringString: string{key:string} expected";
+                            return "mapStringString: string{k:string} expected";
                 }
                 if (message.mapStringInt32 !== undefined) {
                     if (!$util.isObject(message.mapStringInt32))
@@ -6149,7 +6145,7 @@ $root.jspb = (function() {
                     var key = Object.keys(message.mapStringInt32);
                     for (var i = 0; i < key.length; ++i)
                         if (!$util.isInteger(message.mapStringInt32[key[i]]))
-                            return "mapStringInt32: integer{key:string} expected";
+                            return "mapStringInt32: integer{k:string} expected";
                 }
                 if (message.mapStringInt64 !== undefined) {
                     if (!$util.isObject(message.mapStringInt64))
@@ -6157,7 +6153,7 @@ $root.jspb = (function() {
                     var key = Object.keys(message.mapStringInt64);
                     for (var i = 0; i < key.length; ++i)
                         if (!$util.isInteger(message.mapStringInt64[key[i]]) && !(message.mapStringInt64[key[i]] && $util.isInteger(message.mapStringInt64[key[i]].low) && $util.isInteger(message.mapStringInt64[key[i]].high)))
-                            return "mapStringInt64: integer|Long{key:string} expected";
+                            return "mapStringInt64: integer|Long{k:string} expected";
                 }
                 if (message.mapStringBool !== undefined) {
                     if (!$util.isObject(message.mapStringBool))
@@ -6165,7 +6161,7 @@ $root.jspb = (function() {
                     var key = Object.keys(message.mapStringBool);
                     for (var i = 0; i < key.length; ++i)
                         if (typeof message.mapStringBool[key[i]] !== "boolean")
-                            return "mapStringBool: boolean{key:string} expected";
+                            return "mapStringBool: boolean{k:string} expected";
                 }
                 if (message.mapStringDouble !== undefined) {
                     if (!$util.isObject(message.mapStringDouble))
@@ -6173,7 +6169,7 @@ $root.jspb = (function() {
                     var key = Object.keys(message.mapStringDouble);
                     for (var i = 0; i < key.length; ++i)
                         if (typeof message.mapStringDouble[key[i]] !== "number")
-                            return "mapStringDouble: number{key:string} expected";
+                            return "mapStringDouble: number{k:string} expected";
                 }
                 if (message.mapStringEnum !== undefined) {
                     if (!$util.isObject(message.mapStringEnum))
@@ -6182,7 +6178,7 @@ $root.jspb = (function() {
                     for (var i = 0; i < key.length; ++i)
                         switch (message.mapStringEnum[key[i]]) {
                         default:
-                            return "mapStringEnum: enum value{key:string} expected";
+                            return "mapStringEnum: enum value{k:string} expected";
                         case 0:
                         case 1:
                         case 2:
@@ -6205,9 +6201,9 @@ $root.jspb = (function() {
                     var key = Object.keys(message.mapInt32String);
                     for (var i = 0; i < key.length; ++i) {
                         if (!/^-?(?:0|[1-9][0-9]*)$/.test(key[i]))
-                            return "mapInt32String: integer key{key:int32} expected";
+                            return "mapInt32String: integer key{k:int32} expected";
                         if (!$util.isString(message.mapInt32String[key[i]]))
-                            return "mapInt32String: string{key:int32} expected";
+                            return "mapInt32String: string{k:int32} expected";
                     }
                 }
                 if (message.mapInt64String !== undefined) {
@@ -6216,9 +6212,9 @@ $root.jspb = (function() {
                     var key = Object.keys(message.mapInt64String);
                     for (var i = 0; i < key.length; ++i) {
                         if (!/^(?:[\x00-\xff]{8}|-?(?:0|[1-9][0-9]*))$/.test(key[i]))
-                            return "mapInt64String: integer|Long key{key:int64} expected";
+                            return "mapInt64String: integer|Long key{k:int64} expected";
                         if (!$util.isString(message.mapInt64String[key[i]]))
-                            return "mapInt64String: string{key:int64} expected";
+                            return "mapInt64String: string{k:int64} expected";
                     }
                 }
                 if (message.mapBoolString !== undefined) {
@@ -6227,9 +6223,9 @@ $root.jspb = (function() {
                     var key = Object.keys(message.mapBoolString);
                     for (var i = 0; i < key.length; ++i) {
                         if (!/^true|false|0|1$/.test(key[i]))
-                            return "mapBoolString: boolean key{key:bool} expected";
+                            return "mapBoolString: boolean key{k:bool} expected";
                         if (!$util.isString(message.mapBoolString[key[i]]))
-                            return "mapBoolString: string{key:bool} expected";
+                            return "mapBoolString: string{k:bool} expected";
                     }
                 }
                 if (message.testMapFields !== undefined && message.testMapFields !== null) {
@@ -6497,8 +6493,7 @@ $root.jspb = (function() {
          * @property {number} MAP_VALUE_BAZ_NOBINARY=2 MAP_VALUE_BAZ_NOBINARY value
          */
         test.MapValueEnumNoBinary = (function() {
-            var valuesById = {},
-                values = Object.create(valuesById);
+            var valuesById = {}, values = Object.create(valuesById);
             values[valuesById[0] = "MAP_VALUE_FOO_NOBINARY"] = 0;
             values[valuesById[1] = "MAP_VALUE_BAR_NOBINARY"] = 1;
             values[valuesById[2] = "MAP_VALUE_BAZ_NOBINARY"] = 2;
@@ -7446,9 +7441,9 @@ $root.google = (function() {
                 if (message.extension !== undefined && message.hasOwnProperty("extension"))
                     for (var i = 0; i < message.extension.length; ++i)
                         $types[8].encode(message.extension[i], writer.uint32(/* id 7, wireType 2 =*/58).fork()).ldelim();
-                if (message.options !== undefined && message.hasOwnProperty("options"))
+                if (message.options && message.hasOwnProperty("options"))
                     $types[9].encode(message.options, writer.uint32(/* id 8, wireType 2 =*/66).fork()).ldelim();
-                if (message.sourceCodeInfo !== undefined && message.hasOwnProperty("sourceCodeInfo"))
+                if (message.sourceCodeInfo && message.hasOwnProperty("sourceCodeInfo"))
                     $types[10].encode(message.sourceCodeInfo, writer.uint32(/* id 9, wireType 2 =*/74).fork()).ldelim();
                 if (message.syntax !== undefined && message.hasOwnProperty("syntax"))
                     writer.uint32(/* id 12, wireType 2 =*/98).string(message.syntax);
@@ -7958,7 +7953,7 @@ $root.google = (function() {
                 if (message.oneofDecl !== undefined && message.hasOwnProperty("oneofDecl"))
                     for (var i = 0; i < message.oneofDecl.length; ++i)
                         $types[6].encode(message.oneofDecl[i], writer.uint32(/* id 8, wireType 2 =*/66).fork()).ldelim();
-                if (message.options !== undefined && message.hasOwnProperty("options"))
+                if (message.options && message.hasOwnProperty("options"))
                     $types[7].encode(message.options, writer.uint32(/* id 7, wireType 2 =*/58).fork()).ldelim();
                 if (message.reservedRange !== undefined && message.hasOwnProperty("reservedRange"))
                     for (var i = 0; i < message.reservedRange.length; ++i)
@@ -8817,7 +8812,7 @@ $root.google = (function() {
                     writer.uint32(/* id 9, wireType 0 =*/72).int32(message.oneofIndex);
                 if (message.jsonName !== undefined && message.hasOwnProperty("jsonName"))
                     writer.uint32(/* id 10, wireType 2 =*/82).string(message.jsonName);
-                if (message.options !== undefined && message.hasOwnProperty("options"))
+                if (message.options && message.hasOwnProperty("options"))
                     $types[9].encode(message.options, writer.uint32(/* id 8, wireType 2 =*/66).fork()).ldelim();
                 return writer;
             };
@@ -9177,8 +9172,7 @@ $root.google = (function() {
              * @property {number} TYPE_SINT64=18 TYPE_SINT64 value
              */
             FieldDescriptorProto.Type = (function() {
-                var valuesById = {},
-                    values = Object.create(valuesById);
+                var valuesById = {}, values = Object.create(valuesById);
                 values[valuesById[1] = "TYPE_DOUBLE"] = 1;
                 values[valuesById[2] = "TYPE_FLOAT"] = 2;
                 values[valuesById[3] = "TYPE_INT64"] = 3;
@@ -9210,8 +9204,7 @@ $root.google = (function() {
              * @property {number} LABEL_REPEATED=3 LABEL_REPEATED value
              */
             FieldDescriptorProto.Label = (function() {
-                var valuesById = {},
-                    values = Object.create(valuesById);
+                var valuesById = {}, values = Object.create(valuesById);
                 values[valuesById[1] = "LABEL_OPTIONAL"] = 1;
                 values[valuesById[2] = "LABEL_REQUIRED"] = 2;
                 values[valuesById[3] = "LABEL_REPEATED"] = 3;
@@ -9272,7 +9265,7 @@ $root.google = (function() {
                     writer = $Writer.create();
                 if (message.name !== undefined && message.hasOwnProperty("name"))
                     writer.uint32(/* id 1, wireType 2 =*/10).string(message.name);
-                if (message.options !== undefined && message.hasOwnProperty("options"))
+                if (message.options && message.hasOwnProperty("options"))
                     $types[1].encode(message.options, writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
                 return writer;
             };
@@ -9472,7 +9465,7 @@ $root.google = (function() {
                 if (message.value !== undefined && message.hasOwnProperty("value"))
                     for (var i = 0; i < message.value.length; ++i)
                         $types[1].encode(message.value[i], writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
-                if (message.options !== undefined && message.hasOwnProperty("options"))
+                if (message.options && message.hasOwnProperty("options"))
                     $types[2].encode(message.options, writer.uint32(/* id 3, wireType 2 =*/26).fork()).ldelim();
                 return writer;
             };
@@ -9701,7 +9694,7 @@ $root.google = (function() {
                     writer.uint32(/* id 1, wireType 2 =*/10).string(message.name);
                 if (message.number !== undefined && message.hasOwnProperty("number"))
                     writer.uint32(/* id 2, wireType 0 =*/16).int32(message.number);
-                if (message.options !== undefined && message.hasOwnProperty("options"))
+                if (message.options && message.hasOwnProperty("options"))
                     $types[2].encode(message.options, writer.uint32(/* id 3, wireType 2 =*/26).fork()).ldelim();
                 return writer;
             };
@@ -9912,7 +9905,7 @@ $root.google = (function() {
                 if (message.method !== undefined && message.hasOwnProperty("method"))
                     for (var i = 0; i < message.method.length; ++i)
                         $types[1].encode(message.method[i], writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
-                if (message.options !== undefined && message.hasOwnProperty("options"))
+                if (message.options && message.hasOwnProperty("options"))
                     $types[2].encode(message.options, writer.uint32(/* id 3, wireType 2 =*/26).fork()).ldelim();
                 return writer;
             };
@@ -10161,7 +10154,7 @@ $root.google = (function() {
                     writer.uint32(/* id 2, wireType 2 =*/18).string(message.inputType);
                 if (message.outputType !== undefined && message.hasOwnProperty("outputType"))
                     writer.uint32(/* id 3, wireType 2 =*/26).string(message.outputType);
-                if (message.options !== undefined && message.hasOwnProperty("options"))
+                if (message.options && message.hasOwnProperty("options"))
                     $types[3].encode(message.options, writer.uint32(/* id 4, wireType 2 =*/34).fork()).ldelim();
                 if (message.clientStreaming !== undefined && message.hasOwnProperty("clientStreaming"))
                     writer.uint32(/* id 5, wireType 0 =*/40).bool(message.clientStreaming);
@@ -10827,8 +10820,7 @@ $root.google = (function() {
              * @property {number} LITE_RUNTIME=3 LITE_RUNTIME value
              */
             FileOptions.OptimizeMode = (function() {
-                var valuesById = {},
-                    values = Object.create(valuesById);
+                var valuesById = {}, values = Object.create(valuesById);
                 values[valuesById[1] = "SPEED"] = 1;
                 values[valuesById[2] = "CODE_SIZE"] = 2;
                 values[valuesById[3] = "LITE_RUNTIME"] = 3;
@@ -11447,8 +11439,7 @@ $root.google = (function() {
              * @property {number} STRING_PIECE=2 STRING_PIECE value
              */
             FieldOptions.CType = (function() {
-                var valuesById = {},
-                    values = Object.create(valuesById);
+                var valuesById = {}, values = Object.create(valuesById);
                 values[valuesById[0] = "STRING"] = 0;
                 values[valuesById[1] = "CORD"] = 1;
                 values[valuesById[2] = "STRING_PIECE"] = 2;
@@ -11465,8 +11456,7 @@ $root.google = (function() {
              * @property {number} JS_NUMBER=2 JS_NUMBER value
              */
             FieldOptions.JSType = (function() {
-                var valuesById = {},
-                    values = Object.create(valuesById);
+                var valuesById = {}, values = Object.create(valuesById);
                 values[valuesById[0] = "JS_NORMAL"] = 0;
                 values[valuesById[1] = "JS_STRING"] = 1;
                 values[valuesById[2] = "JS_NUMBER"] = 2;
@@ -12567,8 +12557,7 @@ $root.google = (function() {
              * @property {number} IDEMPOTENT=2 IDEMPOTENT value
              */
             MethodOptions.IdempotencyLevel = (function() {
-                var valuesById = {},
-                    values = Object.create(valuesById);
+                var valuesById = {}, values = Object.create(valuesById);
                 values[valuesById[0] = "IDEMPOTENCY_UNKNOWN"] = 0;
                 values[valuesById[1] = "NO_SIDE_EFFECTS"] = 1;
                 values[valuesById[2] = "IDEMPOTENT"] = 2;

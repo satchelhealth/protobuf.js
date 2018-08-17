@@ -4,7 +4,7 @@ module.exports = static_target;
 var protobuf   = require("../.."),
     cliUtil    = require("../util"),
     UglifyJS   = require("uglify-js"),
-    esprima    = require("esprima"),
+    espree     = require("espree"),
     escodegen  = require("escodegen"),
     estraverse = require("estraverse");
 
@@ -25,13 +25,11 @@ function static_target(root, options, callback) {
     try {
         if (config.comments)
             push("// Common aliases");
-        push("var $Reader = $protobuf.Reader,");
-        push("    $Writer = $protobuf.Writer,");
-        push("    $util   = $protobuf.util;");
+        push((config.es6 ? "const" : "var") + " $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;");
         push("");
         if (config.comments)
             push("// Lazily resolved type references");
-        push("var $lazyTypes = [];");
+        push((config.es6 ? "const" : "var") + " $lazyTypes = [];");
         push("");
         if (config.comments) {
             if (root.comment)
@@ -40,7 +38,7 @@ function static_target(root, options, callback) {
                 push("// Exported root namespace");
         }
         var rootProp = cliUtil.safeProp(config.root || "default");
-        push("var $root = $protobuf.roots" + rootProp + " || ($protobuf.roots" + rootProp + " = {});");
+        push((config.es6 ? "const" : "var") + " $root = $protobuf.roots" + rootProp + " || ($protobuf.roots" + rootProp + " = {});");
         buildNamespace(null, root);
         push("");
         if (config.comments)
@@ -93,9 +91,16 @@ function aOrAn(name) {
         : "a ") + name;
 }
 
-function buildNamespace(ref, ns) {
+function buildNamespace(ref, ns, buildServiceAsServer) {
     if (!ns)
         return;
+
+    if(ns instanceof Service){
+      buildService(ref, ns, false);
+      buildService(ref, ns, true);
+      return
+    }
+
     if (ns.name !== "") {
         push("");
         push(name(ref) + "." + name(ns.name) + " = (function() {");
@@ -104,16 +109,14 @@ function buildNamespace(ref, ns) {
 
     if (ns instanceof Type) {
         buildType(undefined, ns);
-    } else if (ns instanceof Service)
-        buildService(undefined, ns);
-    else if (ns.name !== "") {
+    } else if (ns.name !== "") {
         push("");
         pushComment([
             ns.comment || "Namespace " + ns.name + ".",
             "@exports " + ns.fullName.substring(1),
             "@namespace"
         ]);
-        push("var " + name(ns.name) + " = {};");
+        push((config.es6 ? "const" : "var") + " " + name(ns.name) + " = {};");
     }
 
     ns.nestedArray.forEach(function(nested) {
@@ -128,6 +131,34 @@ function buildNamespace(ref, ns) {
         --indent;
         push("})();");
     }
+
+}
+
+function buildService(ref, ns, buildAsServer) {
+    var serviceType = buildAsServer ? "Server" : "Client";
+
+    push("");
+    push(name(ref) + "." + name(ns.name) + serviceType + " = (function() {");
+    ++indent;
+
+        if(buildAsServer){
+          buildServer(undefined, ns);
+        }else{
+          buildClient(undefined, ns);
+        }
+
+        ns.nestedArray.forEach(function(nested) {
+            if (nested instanceof Enum){
+              buildEnum(ns.name, nested);
+            }else if (nested instanceof Namespace){
+              buildNamespace(ns.name, nested);
+            }
+        });
+
+        push("");
+        push("return " + name(ns.name) + serviceType + ";");
+    --indent;
+    push("})();");
 }
 
 var reduceableBlockStatements = {
@@ -136,24 +167,23 @@ var reduceableBlockStatements = {
     WhileStatement: true
 };
 
+var shortVars = {
+    "r": "reader",
+    "w": "writer",
+    "m": "message",
+    "t": "tag",
+    "l": "length",
+    "c": "end", "c2": "end2",
+    "k": "key",
+    "ks": "keys", "ks2": "keys2",
+    "e": "error",
+    "f": "impl",
+    "o": "options",
+    "d": "object",
+    "n": "long"
+};
+
 function beautifyCode(code) {
-    // Rename short vars
-    code = code
-        .replace(/\b(?!\\)r\b/g, "reader")
-        .replace(/\b(?!\\)w\b/g, "writer")
-        .replace(/\b(?!\\)m\b/g, "message")
-        .replace(/\b(?!\\)t\b/g, "tag")
-        .replace(/\b(?!\\)l\b/g, "length")
-        .replace(/\b(?!\\)c\b/g, "end")
-        .replace(/\b(?!\\)c2\b/g, "end2")
-        .replace(/\b(?!\\)k\b/g, "key")
-        .replace(/\b(?!\\)ks\b/g, "keys")
-        .replace(/\b(?!\\)ks2\b/g, "keys2")
-        .replace(/\b(?!\\)e\b/g, "error")
-        .replace(/\b(?!\\)f\b/g, "impl")
-        .replace(/\b(?!\\)o\b/g, "options")
-        .replace(/\b(?!\\)d\b/g, "object")
-        .replace(/\b(?!\\)n\b/g, "long");
     // Add semicolons
     code = UglifyJS.minify(code, {
         fromString: true,
@@ -164,9 +194,20 @@ function beautifyCode(code) {
         }
     }).code;
     // Properly beautify
-    var ast = esprima.parse(code);
+    var ast = espree.parse(code);
     estraverse.replace(ast, {
         enter: function(node, parent) {
+            // rename short vars
+            if (node.type === "Identifier" && parent.property !== node && shortVars[node.name])
+                return {
+                    "type": "Identifier",
+                    "name": shortVars[node.name]
+                };
+            // replace var with let if es6
+            if (config.es6 && node.type === "VariableDeclaration" && node.kind === "var") {
+                node.kind = "let";
+                return undefined;
+            }
             // remove braces around block statements with a single child
             if (node.type === "BlockStatement" && reduceableBlockStatements[parent.type] && node.body.length === 1)
                 return node.body[0];
@@ -200,7 +241,7 @@ function buildFunction(type, functionName, gen, scope) {
 
     if (config.beautify)
         code = beautifyCode(code);
-    
+
     code = code.replace(/ {4}/g, "\t");
 
     var hasScope = scope && Object.keys(scope).length;
@@ -276,7 +317,7 @@ function buildType(ref, type) {
         ++indent;
         push("if (properties)");
             ++indent;
-            push("for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)");
+            push("for (" + (config.es6 ? "let" : "var") + " keys = Object.keys(properties), i = 0; i < keys.length; ++i)");
                 ++indent;
                 push("this[keys[i]] = properties[keys[i]];");
                 --indent;
@@ -322,14 +363,14 @@ function buildType(ref, type) {
     });
 
     // virtual oneof fields
-    var firstOneOf = true;;
+    var firstOneOf = true;
     type.oneofsArray.forEach(function(oneof) {
         if (firstOneOf) {
             firstOneOf = false;
             push("");
             if (config.comments)
                 push("// OneOf field names bound to virtual getters and setters");
-            push("var $oneOfFields;");
+            push((config.es6 ? "let" : "var") + " $oneOfFields;");
         }
         oneof.resolve();
         push("");
@@ -359,7 +400,7 @@ function buildType(ref, type) {
         push("");
         if (config.comments)
             push("// Lazily resolved type references");
-        push("var $types = {");
+        push((config.es6 ? "const" : "var") + " $types = {");
         ++indent;
             types.forEach(function(line, i) {
                 push(line + (i === types.length - 1 ? "" : ","));
@@ -381,7 +422,7 @@ function buildType(ref, type) {
             --indent;
         push("};");
     }
-    
+
     if (config.encode) {
         push("");
         pushComment([
@@ -504,12 +545,85 @@ function buildType(ref, type) {
     }
 }
 
-function buildService(ref, service) {
-    var fullName = service.fullName.substring(1);
+function buildServer(ref, service) {
+  var fullName = service.fullName.substring(1) + "Server";
+  push("");
+  pushComment([
+      "Constructs a new " + service.name + " server.",
+      service.comment ? "@classdesc " + service.comment : null,
+      "@exports " + fullName,
+      "@extends $protobuf.rpc.Server",
+      "@constructor",
+      "@param {$protobuf.RPCServerImpl} rpcServerImpl RPC implementation",
+  ]);
+  push("function " + name(service.name) + "Server(rpcServerImpl) {");
+  ++indent;
+  push("$protobuf.rpc.Server.call(this, rpcServerImpl);");
+  --indent;
+  push("}");
+  push("");
+  push("(" + name(service.name) + "Server.prototype = Object.create($protobuf.rpc.Server.prototype)).constructor = " + name(service.name) + "Server;");
+
+  if (config.create) {
+      push("");
+      pushComment([
+          "Creates new " + service.name + "Server server using the specified rpc implementation.",
+          "@param {$protobuf.RPCImpl} rpcServerImpl RPC implementation",
+          "@returns {" + name(service.name) + "Server} RPC server."
+      ]);
+      push(name(service.name) + "Server.create = function create(rpcServerImpl) {");
+          ++indent;
+          push("return new this(rpcServerImpl);");
+          --indent;
+      push("};");
+  }
+
+  service.methodsArray.forEach(function(method) {
+      method.resolve();
+      var mName = method.name;
+      push("");
+      var cbName = name(service.name) + "Server_" + name(mName) + "_Callback";
+      pushComment([
+          "Callback as used by {@link " + name(service.name) + "Server#" + name(mName) + "}.",
+          // This is a more specialized version of protobuf.rpc.ServiceCallback
+          "@typedef " + cbName,
+          "@type {function}",
+          "@param {?Error} error Error, if any",
+          "@param {" + method.resolvedResponseType.fullName.substring(1) + "} [response] " + method.resolvedResponseType.name
+      ]);
+      push("");
+      pushComment([
+          method.comment || "Calls " + method.name + ".",
+          "@param {Object} ctx Object containing request-scoped data",
+          "@param {" + method.resolvedRequestType.fullName.substring(1) + "|Object} request " + method.resolvedRequestType.name + " message or plain object",
+          "@param {" + cbName + "} callback Node-style callback called with the error, if any, and " + method.resolvedResponseType.name,
+          "@returns {undefined}"
+      ]);
+      push(name(service.name) + "Server.prototype" + util.safeProp(mName) + " = function " + name(mName) + "(ctx, request, callback) {");
+          ++indent;
+          push("return this.rpcCall({ctx: ctx, method: \"" + name(method.name) + "\"}, $root" + method.resolvedRequestType.fullName + ", $root" + method.resolvedResponseType.fullName + ", request, callback);");
+          --indent;
+      push("};");
+      if (config.comments)
+          push("");
+      pushComment([
+          method.comment || "Calls " + method.name + ".",
+          "@name " + name(service.name) + "Server#" + mName,
+          "@function",
+          "@param {Object} ctx Object containing request-scoped data",
+          "@param {" + method.resolvedRequestType.fullName.substring(1) + "|Object} request " + method.resolvedRequestType.name + " message or plain object",
+          "@returns {Promise<"+method.resolvedResponseType.fullName.substring(1)+">} Promise",
+          "@variation 2"
+      ]);
+  });
+}
+
+function buildClient(ref, service) {
+    var fullName = service.fullName.substring(1) + "Client";
 
     push("");
     pushComment([
-        "Constructs a new " + service.name + " service.",
+        "Constructs a new " + service.name + " client.",
         service.comment ? "@classdesc " + service.comment : null,
         "@exports " + fullName,
         "@extends $protobuf.rpc.Service",
@@ -518,24 +632,24 @@ function buildService(ref, service) {
         "@param {boolean} [requestDelimited=false] Whether requests are length-delimited",
         "@param {boolean} [responseDelimited=false] Whether responses are length-delimited"
     ]);
-    push("function " + name(service.name) + "(rpcImpl, requestDelimited, responseDelimited) {");
+    push("function " + name(service.name) + "Client(rpcImpl, requestDelimited, responseDelimited) {");
     ++indent;
     push("$protobuf.rpc.Service.call(this, rpcImpl, requestDelimited, responseDelimited);");
     --indent;
     push("}");
     push("");
-    push("(" + name(service.name) + ".prototype = Object.create($protobuf.rpc.Service.prototype)).constructor = " + name(service.name) + ";");
+    push("(" + name(service.name) + "Client.prototype = Object.create($protobuf.rpc.Service.prototype)).constructor = " + name(service.name) + "Client;");
 
     if (config.create) {
         push("");
         pushComment([
-            "Creates new " + service.name + " service using the specified rpc implementation.",
+            "Creates new " + service.name + "Client client using the specified rpc implementation.",
             "@param {$protobuf.RPCImpl} rpcImpl RPC implementation",
             "@param {boolean} [requestDelimited=false] Whether requests are length-delimited",
             "@param {boolean} [responseDelimited=false] Whether responses are length-delimited",
-            "@returns {" + name(service.name) + "} RPC service. Useful where requests and/or responses are streamed."
+            "@returns {" + name(service.name) + "Client} RPC client. Useful where requests and/or responses are streamed."
         ]);
-        push(name(service.name) + ".create = function create(rpcImpl, requestDelimited, responseDelimited) {");
+        push(name(service.name) + "Client.create = function create(rpcImpl, requestDelimited, responseDelimited) {");
             ++indent;
             push("return new this(rpcImpl, requestDelimited, responseDelimited);");
             --indent;
@@ -546,9 +660,9 @@ function buildService(ref, service) {
         method.resolve();
         var lcName = method.name.substring(0, 1).toLowerCase() + method.name.substring(1);
         push("");
-        var cbName = name(service.name) + "_" + name(lcName) + "_Callback";
+        var cbName = name(service.name) + "Client_" + name(lcName) + "_Callback";
         pushComment([
-            "Callback as used by {@link " + name(service.name) + "#" + name(lcName) + "}.",
+            "Callback as used by {@link " + name(service.name) + "Client#" + name(lcName) + "}.",
             // This is a more specialized version of protobuf.rpc.ServiceCallback
             "@typedef " + cbName,
             "@type {function}",
@@ -562,16 +676,16 @@ function buildService(ref, service) {
             "@param {" + cbName + "} callback Node-style callback called with the error, if any, and " + method.resolvedResponseType.name,
             "@returns {undefined}"
         ]);
-        push(name(service.name) + ".prototype" + util.safeProp(lcName) + " = function " + name(lcName) + "(request, callback) {");
+        push(name(service.name) + "Client.prototype" + util.safeProp(lcName) + " = function " + name(lcName) + "(request, callback) {");
             ++indent;
-            push("return this.rpcCall(" + name(lcName) + ", $root" + method.resolvedRequestType.fullName + ", $root" + method.resolvedResponseType.fullName + ", request, callback);");
+            push("return this.rpcCall(\"" + name(method.name) + "\", $root" + method.resolvedRequestType.fullName + ", $root" + method.resolvedResponseType.fullName + ", request, callback);");
             --indent;
         push("};");
         if (config.comments)
             push("");
         pushComment([
             method.comment || "Calls " + method.name + ".",
-            "@name " + name(service.name) + "#" + lcName,
+            "@name " + name(service.name) + "Client#" + lcName,
             "@function",
             "@param {" + method.resolvedRequestType.fullName.substring(1) + "|Object} request " + method.resolvedRequestType.name + " message or plain object",
             "@returns {Promise<"+method.resolvedResponseType.fullName.substring(1)+">} Promise",
@@ -604,8 +718,7 @@ function buildEnum(ref, enm) {
     pushComment(comment);
     push(name(ref) + "." + name(enm.name) + " = (function() {");
     ++indent;
-        push("var valuesById = {},");
-        push("    values = Object.create(valuesById);");
+        push((config.es6 ? "const" : "var") + " valuesById = {}, values = Object.create(valuesById);");
         Object.keys(enm.values).forEach(function(key) {
             var val = enm.values[key];
             push("values[valuesById[" + val + "] = " + JSON.stringify(key) + "] = " + val + ";");
